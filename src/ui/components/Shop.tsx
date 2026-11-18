@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useGame } from '../../game/store';
 import { BUILDINGS, CATEGORIES } from '../../game/data/buildings';
 import { quoteBuilding } from '../../game/engine/actions';
@@ -34,10 +34,19 @@ function ShopItem({ b }: { b: BuildingDef }) {
   const q = quoteBuilding(s, b, s.settings.buyAmount, mods);
   const mult = (mods.building[b.id] ?? 1) * (mods.cat[b.cat] ?? 1);
   const disabled = !!q.blocked;
+  const [pops, setPops] = useState<{ id: number; n: number }[]>([]);
+  const popId = useRef(0);
+  const onBuy = () => {
+    const n = q.count;
+    buy(b.id);
+    const id = popId.current++;
+    setPops((p) => [...p.slice(-3), { id, n }]);
+    window.setTimeout(() => setPops((p) => p.filter((o) => o.id !== id)), 800);
+  };
   const reason =
     q.blocked === 'space' ? 'Plus de place !' : q.blocked === 'max' ? 'Maximum atteint' : q.blocked === 'era' ? 'Ère suivante' : '';
   return (
-    <button className={`shop-item ${disabled ? 'disabled' : ''} ${q.blocked === 'money' ? 'poor' : ''}`} onClick={() => buy(b.id)} disabled={disabled}>
+    <button className={`shop-item ${disabled ? 'disabled' : ''} ${q.blocked === 'money' ? 'poor' : ''}`} onClick={onBuy} disabled={disabled}>
       <span className="shop-icon">{b.icon}</span>
       <span className="shop-main">
         <span className="shop-name">
@@ -56,7 +65,14 @@ function ShopItem({ b }: { b: BuildingDef }) {
         </span>
       </span>
       <span className="shop-side">
-        <span className="shop-owned">{owned}</span>
+        <span key={owned} className={`shop-owned ${pops.length ? 'bump' : ''}`}>
+          {owned}
+        </span>
+        {pops.map((p) => (
+          <span key={p.id} className="buy-pop">
+            +{p.n}
+          </span>
+        ))}
         <span className={`shop-cost ${q.blocked === 'money' ? 'bad' : ''}`}>
           {reason || (
             <>

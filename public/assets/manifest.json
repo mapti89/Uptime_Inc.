@@ -1,0 +1,81 @@
+{
+  "eras": {
+    "1": {
+      "background": "assets/eras/era-1.webp",
+      "transition": null,
+      "rackZone": {
+        "x": 0.255,
+        "y": 0.32,
+        "w": 0.475,
+        "h": 0.24
+      },
+      "floorY": 0.56,
+      "accent": "#39d0ff"
+    },
+    "2": {
+      "background": "assets/eras/era-2.webp",
+      "transition": "assets/transitions/era-2.webp",
+      "rackZone": {
+        "x": 0.429,
+        "y": 0.265,
+        "w": 0.16,
+        "h": 0.597
+      },
+      "floorY": 0.862,
+      "accent": "#39d0ff"
+    },
+    "3": {
+      "background": "assets/eras/era-3.webp",
+      "transition": "assets/transitions/era-3.webp",
+      "rackZone": {
+        "x": 0.225,
+        "y": 0.29,
+        "w": 0.55,
+        "h": 0.505
+      },
+      "floorY": 0.795,
+      "accent": "#39d0ff"
+    },
+    "4": {
+      "background": "assets/eras/era-4.webp",
+      "transition": "assets/transitions/era-4.webp",
+      "rackZone": {
+        "x": 0.28,
+        "y": 0.285,
+        "w": 0.44,
+        "h": 0.53
+      },
+      "floorY": 0.815,
+      "accent": "#4dd4ac"
+    },
+    "5": {
+      "background": "assets/eras/era-5.webp",
+      "transition": "assets/transitions/era-5.webp",
+      "rackZone": {
+        "x": 0.205,
+        "y": 0.335,
+        "w": 0.59,
+        "h": 0.47
+      },
+      "floorY": 0.805,
+      "accent": "#8ab4ff"
+    },
+    "6": {
+      "background": "assets/eras/era-6.webp",
+      "transition": "assets/transitions/era-6.webp",
+      "rackZone": {
+        "x": 0.235,
+        "y": 0.43,
+        "w": 0.53,
+        "h": 0.41
+      },
+      "floorY": 0.84,
+      "accent": "#c792ea"
+    }
+  },
+  "brand": {
+    "logo": "assets/brand/logo.webp",
+    "favicon": "favicon.png",
+    "appleTouchIcon": "apple-touch-icon.png"
+  }
+}

@@ -1,8 +1,10 @@
 import { useGame } from '../../game/store';
 import { eraDef } from '../../game/data/eras';
 import { fmt, money, pct } from '../format';
+import { Tweened } from './Tweened';
+import type { ReactNode } from 'react';
 
-function Chip({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: string }) {
+function Chip({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: string; tone?: string }) {
   return (
     <div className={`chip ${tone ?? ''}`}>
       <span className="chip-label">{label}</span>
@@ -21,7 +23,7 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="brand">
-        <span className="logo">▣</span>
+        <img className="logo" src={`${import.meta.env.BASE_URL}assets/brand/logo.webp`} alt="" width={40} height={40} />
         <div>
           <div className="brand-name">Uptime Inc.</div>
           <div className="brand-era">
@@ -30,17 +32,17 @@ export function TopBar() {
         </div>
       </div>
       <div className="chips">
-        <Chip label="Trésorerie" value={money(s.money)} sub={`${income >= 0 ? '+' : ''}${fmt(income)} $/s`} tone="money" />
+        <Chip label="Trésorerie" value={<Tweened value={s.money} format={money} />} sub={`${income >= 0 ? '+' : ''}${fmt(income)} $/s`} tone="money" />
         <Chip
           label="Requêtes"
-          value={`${fmt(snap.totalServed)}/s`}
+          value={<Tweened value={snap.totalServed} format={(n) => `${fmt(n)}/s`} />}
           sub={`demande ${fmt(snap.totalDemand)}/s`}
           tone={quality < 0.9 ? 'warn' : ''}
         />
         <Chip label="Qualité de service" value={pct(quality)} tone={quality < 0.8 ? 'bad' : quality < 0.95 ? 'warn' : 'good'} />
         <Chip label="Uptime" value={pct(s.uptime, 2)} tone={s.uptime >= 0.999 ? 'good' : s.uptime < 0.9 ? 'bad' : ''} />
         <Chip label="Réputation" value={`${Math.round(s.reputation)}/100`} sub={`demande ×${(0.5 + s.reputation / 100).toFixed(2)}`} />
-        {s.era >= 2 && <Chip label="R&D" value={fmt(s.rd)} sub={`+${fmt(snap.rdRate)}/s`} tone="rd" />}
+        {s.era >= 2 && <Chip label="R&D" value={<Tweened value={s.rd} format={fmt} />} sub={`+${fmt(snap.rdRate)}/s`} tone="rd" />}
         {s.prestige.totalShares > 0 && <Chip label="Actions" value={fmt(s.prestige.shares)} tone="shares" />}
       </div>
     </header>

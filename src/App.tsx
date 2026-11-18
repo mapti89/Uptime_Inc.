@@ -15,6 +15,8 @@ import { PrestigePanel } from './ui/components/PrestigePanel';
 import { Settings } from './ui/components/Settings';
 import { Toasts } from './ui/components/Toasts';
 import { OfflineModal } from './ui/components/OfflineModal';
+import { EraTransition } from './ui/components/EraTransition';
+import { EVENT_BY_ID } from './game/data/events';
 import { useGame } from './game/store';
 import { UPGRADES } from './game/data/upgrades';
 import { RESEARCH } from './game/data/research';
@@ -39,6 +41,7 @@ function TabBadge({ tab }: { tab: Tab }) {
 export default function App() {
   const [tab, setTab] = useState<Tab>('infra');
   const era = useGame((g) => g.state.era);
+  const alert = useGame((g) => g.state.events.some((e) => !EVENT_BY_ID[e.defId]?.good));
   const tabs: { id: Tab; label: string; show: boolean }[] = [
     { id: 'infra', label: '🏗️ Infrastructure', show: true },
     { id: 'upgrades', label: '⬆️ Améliorations', show: true },
@@ -54,12 +57,12 @@ export default function App() {
       <TopBar />
       <main className="layout">
         <aside className="col-left">
-          <ServerRoom />
           <EraPanel />
           <IncidentsPanel />
           <ResourceGauges />
         </aside>
         <section className="col-center">
+          <ServerRoom />
           <nav className="tabs">
             {tabs
               .filter((t) => t.show)
@@ -85,8 +88,10 @@ export default function App() {
           <EventLog />
         </aside>
       </main>
+      {alert && <div className="alert-vignette" aria-hidden="true" />}
       <Toasts />
       <OfflineModal />
+      <EraTransition />
     </div>
   );
 }

@@ -2,11 +2,17 @@ import { useGame } from '../../game/store';
 import { ERAS, MAX_ERA, eraDef } from '../../game/data/eras';
 import { canMoveEra } from '../../game/engine/actions';
 import { money } from '../format';
+import { useEffect } from 'react';
+import { preloadEra } from './EraTransition';
 
 export function EraPanel() {
   const s = useGame((g) => g.state);
   const moveEra = useGame((g) => g.moveEra);
   const era = eraDef(s.era);
+  const ready = s.era < MAX_ERA && canMoveEra(s);
+  useEffect(() => {
+    if (ready) preloadEra(s.era + 1);
+  }, [ready, s.era]);
   if (s.era >= MAX_ERA) {
     return (
       <div className="panel era-panel">

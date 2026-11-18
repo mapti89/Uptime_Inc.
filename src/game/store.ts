@@ -21,6 +21,8 @@ interface Store {
   offline: OfflineReport | null;
   toasts: Toast[];
   floaters: { id: number; text: string; x: number; y: number }[];
+  /** Ère tout juste atteinte par un déménagement (affiche l'écran de transition). */
+  eraTransition: number | null;
 
   advance: (dt: number) => void;
   catchUp: (seconds: number) => void;
@@ -38,6 +40,7 @@ interface Store {
   toggleAutoUpgrades: () => void;
   dismissOffline: () => void;
   dismissToast: (id: number) => void;
+  dismissEraTransition: () => void;
   save: () => void;
   exportSave: () => string;
   importSave: (text: string) => boolean;
@@ -98,6 +101,7 @@ export const useGame = create<Store>((set, get) => ({
   offline: init.offline,
   toasts: [],
   floaters: [],
+  eraTransition: null,
 
   advance: (dt) =>
     mutate(get, set, (s) => {
@@ -125,7 +129,13 @@ export const useGame = create<Store>((set, get) => ({
   buyUpgrade: (id) => mutate(get, set, (s) => A.buyUpgrade(s, id)),
   buyAllUpgrades: () => mutate(get, set, (s) => A.buyAllUpgrades(s)),
   buyResearch: (id) => mutate(get, set, (s) => A.buyResearch(s, id)),
-  moveEra: () => mutate(get, set, (s) => A.moveEra(s)),
+  moveEra: () => {
+    let moved = false;
+    mutate(get, set, (s) => {
+      moved = A.moveEra(s);
+    });
+    if (moved) set({ eraTransition: get().state.era });
+  },
   fixEvent: (uid) => mutate(get, set, (s) => A.fixEvent(s, uid)),
   repairNow: () => mutate(get, set, (s) => A.repairNow(s)),
   prestige: () => {
@@ -139,6 +149,7 @@ export const useGame = create<Store>((set, get) => ({
   toggleAutoUpgrades: () => mutate(get, set, (s) => (s.settings.autoUpgrades = !s.settings.autoUpgrades)),
   dismissOffline: () => set({ offline: null }),
   dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
+  dismissEraTransition: () => set({ eraTransition: null }),
   save: () => {
     const s = structuredClone(get().state);
     saveToStorage(s);
