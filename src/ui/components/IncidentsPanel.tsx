@@ -2,6 +2,7 @@ import { useGame } from '../../game/store';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { fixEventCost, repairCost } from '../../game/engine/actions';
 import { duration, money, pct } from '../format';
+import { GameIcon } from './GameIcon';
 
 export function IncidentsPanel() {
   const s = useGame((g) => g.state);
@@ -18,8 +19,8 @@ export function IncidentsPanel() {
         return (
           <div key={ev.uid} className={`incident ${def.good ? 'good' : 'bad'}`}>
             <div className="incident-head">
-              <span>
-                {def.icon} {def.name}
+              <span className="incident-title">
+                <GameIcon set="events" id={def.id} emoji={def.icon} size={26} /> {def.name}
               </span>
               <span className="muted">{duration(ev.remaining)}</span>
             </div>

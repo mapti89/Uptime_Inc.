@@ -3,6 +3,7 @@ import { useGame } from '../../game/store';
 import { BUILDINGS, CATEGORIES } from '../../game/data/buildings';
 import { quoteBuilding } from '../../game/engine/actions';
 import type { BuildingDef, BuyAmount, Category, Provides } from '../../game/types';
+import { GameIcon } from './GameIcon';
 import { bandwidth, fmt, money, ram, storage, watts } from '../format';
 
 const AMOUNTS: BuyAmount[] = [1, 10, 100, 'max'];
@@ -47,7 +48,9 @@ function ShopItem({ b }: { b: BuildingDef }) {
     q.blocked === 'space' ? 'Plus de place !' : q.blocked === 'max' ? 'Maximum atteint' : q.blocked === 'era' ? 'Ère suivante' : '';
   return (
     <button className={`shop-item ${disabled ? 'disabled' : ''} ${q.blocked === 'money' ? 'poor' : ''}`} onClick={onBuy} disabled={disabled}>
-      <span className="shop-icon">{b.icon}</span>
+      <span className="shop-icon">
+        <GameIcon set="buildings" id={b.id} emoji={b.icon} size={44} />
+      </span>
       <span className="shop-main">
         <span className="shop-name">
           {b.name} {mult > 1 && <span className="mult">×{fmt(mult)}</span>}
@@ -98,7 +101,7 @@ export function Shop() {
         <div className="subtabs">
           {CATEGORIES.map((c) => (
             <button key={c.id} className={`subtab ${cat === c.id ? 'active' : ''}`} onClick={() => setCat(c.id)}>
-              {c.icon} {c.name}
+              <GameIcon set="categories" id={c.id} emoji={c.icon} size={20} /> {c.name}
             </button>
           ))}
         </div>
