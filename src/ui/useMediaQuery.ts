@@ -16,3 +16,6 @@ export function useMediaQuery(query: string): boolean {
 
 /** Même seuil que les media queries « mobile » de global.css. */
 export const MOBILE_QUERY = '(max-width: 820px)';
+
+/** Mobile « large » : pliable déplié ou petite tablette, assez de place pour deux colonnes. */
+export const WIDE_MOBILE_QUERY = '(min-width: 600px) and (min-height: 500px)';
