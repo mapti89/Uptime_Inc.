@@ -149,7 +149,7 @@ function MobileLayout() {
         {current === 'salle' && (
           <>
             <IncidentsPanel />
-            <RequestsPanel />
+            <ResourceGauges />
           </>
         )}
         {current === 'infra' && <Shop />}
@@ -158,7 +158,7 @@ function MobileLayout() {
         {current === 'etat' && (
           <>
             <EraPanel />
-            <ResourceGauges />
+            <RequestsPanel />
             <EventLog />
           </>
         )}
