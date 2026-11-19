@@ -1,0 +1,40 @@
+import { create } from 'zustand';
+import type { Category, Provides } from '../game/types';
+
+export type DesktopTab = 'infra' | 'upgrades' | 'research' | 'achievements' | 'stats' | 'prestige' | 'settings';
+export type MobileView = 'salle' | 'infra' | 'upgrades' | 'research' | 'etat' | 'plus';
+
+/** Ce qu'un raccourci demande de mettre en évidence dans la boutique. */
+export interface ShopFocus {
+  key: keyof Provides;
+  /** Change à chaque raccourci, pour relancer le défilement et l'animation même sur la même cible. */
+  nonce: number;
+}
+
+interface UiStore {
+  desktopTab: DesktopTab;
+  mobileView: MobileView;
+  shopCat: Category;
+  shopFocus: ShopFocus | null;
+  setDesktopTab: (t: DesktopTab) => void;
+  setMobileView: (v: MobileView) => void;
+  setShopCat: (c: Category) => void;
+  /** Raccourci : ouvre Infrastructure sur la catégorie et met en évidence ce qui fournit `key`. */
+  goToShop: (cat: Category, key: keyof Provides) => void;
+  clearShopFocus: (nonce: number) => void;
+}
+
+let focusNonce = 0;
+
+export const useUi = create<UiStore>((set) => ({
+  desktopTab: 'infra',
+  mobileView: 'salle',
+  shopCat: 'servers',
+  shopFocus: null,
+  setDesktopTab: (desktopTab) => set({ desktopTab }),
+  setMobileView: (mobileView) => set({ mobileView }),
+  setShopCat: (shopCat) => set({ shopCat, shopFocus: null }),
+  goToShop: (cat, key) =>
+    set({ desktopTab: 'infra', mobileView: 'infra', shopCat: cat, shopFocus: { key, nonce: ++focusNonce } }),
+  clearShopFocus: (nonce) => set((s) => (s.shopFocus?.nonce === nonce ? { shopFocus: null } : {})),
+}));

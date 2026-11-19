@@ -1,5 +1,7 @@
 import { useGame } from '../../game/store';
-import { RESOURCES } from '../../game/types';
+import { RESOURCES, type Category, type Provides, type Res } from '../../game/types';
+import { CATEGORIES } from '../../game/data/buildings';
+import { useUi } from '../uiStore';
 import { RES_LABEL, fmt, pct, resValue, watts } from '../format';
 
 function Gauge({
@@ -9,6 +11,7 @@ function Gauge({
   text,
   hint,
   invert,
+  go,
 }: {
   label: string;
   used: number;
@@ -16,7 +19,11 @@ function Gauge({
   text: string;
   hint?: string;
   invert?: boolean;
+  /** Raccourci : catégorie de la boutique et caractéristique à mettre en évidence. */
+  go: [Category, keyof Provides];
 }) {
+  const goToShop = useUi((u) => u.goToShop);
+  const catName = CATEGORIES.find((c) => c.id === go[0])?.name ?? '';
   const ratio = cap > 0 ? used / cap : used > 0 ? Infinity : 0;
   const shown = Math.min(1, ratio);
   const tone = invert
@@ -31,18 +38,38 @@ function Gauge({
         ? 'warn'
         : 'good';
   return (
-    <div className="gauge" title={hint}>
-      <div className="gauge-head">
+    <button
+      type="button"
+      className="gauge gauge-link"
+      title={`${hint ? `${hint}\n` : ''}Voir dans Infrastructure → ${catName}`}
+      aria-label={`${label} : ${text}. Voir dans Infrastructure, ${catName}`}
+      onClick={() => goToShop(go[0], go[1])}
+    >
+      <span className="gauge-head">
         <span>{label}</span>
-        <span className={`gauge-val ${tone}`}>{text}</span>
-      </div>
-      <div className="bar thin">
-        <div className={`bar-fill ${tone}`} style={{ width: `${shown * 100}%` }} />
-      </div>
-      {hint && <p className="gauge-hint">{hint}</p>}
-    </div>
+        <span className={`gauge-val ${tone}`}>
+          {text}
+          <span className="gauge-go" aria-hidden="true">
+            ›
+          </span>
+        </span>
+      </span>
+      <span className="bar thin">
+        <span className={`bar-fill ${tone}`} style={{ width: `${shown * 100}%` }} />
+      </span>
+      {hint && <span className="gauge-hint">{hint}</span>}
+    </button>
   );
 }
+
+/** Où acheter chaque ressource de calcul. */
+const RES_SHOP: Record<Res, [Category, keyof Provides]> = {
+  cpu: ['servers', 'cpu'],
+  ram: ['servers', 'ram'],
+  gpu: ['servers', 'gpu'],
+  storage: ['storage', 'storage'],
+  bw: ['network', 'bw'],
+};
 
 export function ResourceGauges() {
   const snap = useGame((g) => g.snap);
@@ -58,6 +85,7 @@ export function ResourceGauges() {
           used={snap.need[r]}
           cap={snap.supply[r]}
           text={`${resValue(r, snap.need[r])} / ${resValue(r, snap.supply[r])}`}
+          go={RES_SHOP[r]}
         />
       ))}
       <div className="sep" />
@@ -67,6 +95,7 @@ export function ResourceGauges() {
         cap={snap.powerCap}
         text={`${watts(snap.totalWatts)} / ${watts(snap.powerCap)}`}
         hint="Consommation des machines × PUE. Si elle dépasse la capacité, tout ralentit."
+        go={['power', 'power']}
       />
       <Gauge
         label="❄️ Chaleur"
@@ -74,12 +103,14 @@ export function ResourceGauges() {
         cap={snap.coolCap}
         text={`${watts(snap.heat)} / ${watts(snap.coolCap)}`}
         hint="Chaleur dégagée vs capacité de refroidissement. Surchauffe = throttling."
+        go={['cooling', 'cooling']}
       />
       <Gauge
         label="📐 Espace"
         used={snap.slotsUsed}
         cap={snap.slotsCap}
         text={`${fmt(snap.slotsUsed)} / ${fmt(snap.slotsCap)} U`}
+        go={['space', 'space']}
       />
       <div className="kv-grid">
         <span>PUE</span>

@@ -656,6 +656,65 @@ h4 {
   font-size: 12px;
   gap: 8px;
 }
+/* Jauge cliquable : raccourci vers la bonne catégorie de l'onglet Infrastructure */
+.gauge-link {
+  display: block;
+  width: calc(100% + 12px);
+  margin-left: -6px;
+  margin-right: -6px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.gauge-link .bar,
+.gauge-link .bar-fill {
+  display: block;
+}
+.gauge-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.gauge-go {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 700;
+  transition: transform 0.15s, color 0.15s;
+}
+.gauge-link:active {
+  background: rgba(57, 208, 255, 0.08);
+}
+@media (hover: hover) {
+  .gauge-link:hover {
+    background: rgba(57, 208, 255, 0.06);
+    border-color: var(--border);
+  }
+  .gauge-link:hover .gauge-go {
+    color: var(--accent);
+    transform: translateX(2px);
+  }
+}
+
+/* Article mis en évidence après un raccourci */
+.shop-item.focus {
+  border-color: var(--accent);
+  animation: shopFocus 2.4s ease-out;
+}
+@keyframes shopFocus {
+  0%,
+  30% {
+    box-shadow:
+      0 0 0 2px var(--accent),
+      0 0 18px rgba(57, 208, 255, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 .gauge-val {
   font-family: var(--mono);
   font-size: 11px;

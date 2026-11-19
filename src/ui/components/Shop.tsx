@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../game/store';
 import { BUILDINGS, CATEGORIES } from '../../game/data/buildings';
 import { quoteBuilding } from '../../game/engine/actions';
-import type { BuildingDef, BuyAmount, Category, Provides } from '../../game/types';
+import type { BuildingDef, BuyAmount, Provides } from '../../game/types';
 import { GameIcon } from './GameIcon';
+import { useUi } from '../uiStore';
 import { bandwidth, fmt, money, ram, storage, watts } from '../format';
 
 const AMOUNTS: BuyAmount[] = [1, 10, 100, 'max'];
@@ -27,7 +28,7 @@ function describeProvides(p: Provides, mult: number): string[] {
   return out;
 }
 
-function ShopItem({ b }: { b: BuildingDef }) {
+function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
   const s = useGame((g) => g.state);
   const mods = useGame((g) => g.mods);
   const buy = useGame((g) => g.buy);
@@ -47,7 +48,8 @@ function ShopItem({ b }: { b: BuildingDef }) {
   const reason =
     q.blocked === 'space' ? 'Plus de place !' : q.blocked === 'max' ? 'Maximum atteint' : q.blocked === 'era' ? 'Ère suivante' : '';
   return (
-    <button className={`shop-item ${disabled ? 'disabled' : ''} ${q.blocked === 'money' ? 'poor' : ''}`} onClick={onBuy} disabled={disabled}>
+    <button
+      className={`shop-item ${disabled ? 'disabled' : ''} ${q.blocked === 'money' ? 'poor' : ''} ${focus ? 'focus' : ''}`} onClick={onBuy} disabled={disabled}>
       <span className="shop-icon">
         <GameIcon set="buildings" id={b.id} emoji={b.icon} size={44} />
       </span>
@@ -90,13 +92,31 @@ function ShopItem({ b }: { b: BuildingDef }) {
 }
 
 export function Shop() {
-  const [cat, setCat] = useState<Category>('servers');
+  const cat = useUi((u) => u.shopCat);
+  const setCat = useUi((u) => u.setShopCat);
+  const focus = useUi((u) => u.shopFocus);
+  const clearFocus = useUi((u) => u.clearShopFocus);
+  const root = useRef<HTMLDivElement>(null);
+
+  // Raccourci depuis une jauge : amener le premier article concerné à l'écran, puis éteindre la surbrillance.
+  useEffect(() => {
+    if (!focus) return;
+    const frame = requestAnimationFrame(() => {
+      const target = root.current?.querySelector('.shop-item.focus') ?? root.current;
+      target?.scrollIntoView({ behavior: 'smooth', block: target === root.current ? 'nearest' : 'center' });
+    });
+    const timer = window.setTimeout(() => clearFocus(focus.nonce), 2600);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [focus, clearFocus]);
   const era = useGame((g) => g.state.era);
   const amount = useGame((g) => g.state.settings.buyAmount);
   const setAmount = useGame((g) => g.setBuyAmount);
   const items = BUILDINGS.filter((b) => b.cat === cat && b.era <= era + 1);
   return (
-    <div className="shop">
+    <div className="shop" ref={root}>
       <div className="shop-toolbar">
         <div className="subtabs">
           {CATEGORIES.map((c) => (
@@ -124,7 +144,11 @@ export function Shop() {
               </span>
             </div>
           ) : (
-            <ShopItem key={b.id} b={b} />
+            (() => {
+              const hit = !!focus && !!b.provides[focus.key];
+              // La clé change avec le raccourci pour relancer l'animation de surbrillance.
+              return <ShopItem key={hit ? `${b.id}-${focus.nonce}` : b.id} b={b} focus={hit} />;
+            })()
           ),
         )}
       </div>

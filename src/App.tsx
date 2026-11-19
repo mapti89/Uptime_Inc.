@@ -23,8 +23,9 @@ import { RESEARCH } from './game/data/research';
 import { researchAvailable, upgradeAvailable } from './game/engine/actions';
 import { MOBILE_QUERY, WIDE_MOBILE_QUERY, useMediaQuery } from './ui/useMediaQuery';
 import { useFoldHinge, type Hinge } from './ui/useFoldPosture';
+import { useUi, type DesktopTab, type MobileView } from './ui/uiStore';
 
-type Tab = 'infra' | 'upgrades' | 'research' | 'achievements' | 'stats' | 'prestige' | 'settings';
+type Tab = DesktopTab;
 
 function TabBadge({ tab }: { tab: string }) {
   const n = useGame((g) => {
@@ -64,7 +65,8 @@ function TabContent({ tab }: { tab: Tab }) {
 }
 
 function DesktopLayout() {
-  const [tab, setTab] = useState<Tab>('infra');
+  const tab = useUi((u) => u.desktopTab);
+  const setTab = useUi((u) => u.setDesktopTab);
   const era = useGame((g) => g.state.era);
   const tabs: { id: Tab; label: string; show: boolean }[] = [
     { id: 'infra', label: '🏗️ Infrastructure', show: true },
@@ -109,7 +111,7 @@ function DesktopLayout() {
 
 /* ---------------- Mobile : une vue à la fois + barre de navigation en bas ---------------- */
 
-type MView = 'salle' | 'infra' | 'upgrades' | 'research' | 'etat' | 'plus';
+type MView = MobileView;
 type MoreTab = 'achievements' | 'stats' | 'prestige' | 'settings';
 
 const MORE_TABS: { id: MoreTab; label: string }[] = [
@@ -126,7 +128,8 @@ const MORE_TABS: { id: MoreTab; label: string }[] = [
 type MobileMode = { kind: 'phone' } | { kind: 'wide' } | { kind: 'flex'; hinge: Hinge };
 
 function MobileLayout({ mode }: { mode: MobileMode }) {
-  const [view, setView] = useState<MView>('salle');
+  const view = useUi((u) => u.mobileView);
+  const setView = useUi((u) => u.setMobileView);
   const [more, setMore] = useState<MoreTab>('achievements');
   const era = useGame((g) => g.state.era);
   const alert = useAlert();
