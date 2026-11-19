@@ -6,7 +6,7 @@ import { tick } from './engine/tick';
 import * as A from './engine/actions';
 import { newGame } from './engine/state';
 import { simulateOffline, type OfflineReport } from './engine/offline';
-import { clearStorage, decodeImport, encodeExport, loadFromStorage, saveToStorage } from './engine/save';
+import { clearStorage, encodeTransfer, loadFromStorage, saveToStorage } from './engine/save';
 
 export interface Toast {
   id: number;
@@ -42,8 +42,10 @@ interface Store {
   dismissToast: (id: number) => void;
   dismissEraTransition: () => void;
   save: () => void;
-  exportSave: () => string;
-  importSave: (text: string) => boolean;
+  /** Code de transfert compact de la partie en cours. */
+  exportSave: () => Promise<string>;
+  /** Remplace la partie en cours (après confirmation côté interface). */
+  loadState: (s: GameState) => void;
   hardReset: () => void;
 }
 
@@ -155,16 +157,10 @@ export const useGame = create<Store>((set, get) => ({
     saveToStorage(s);
     set({ state: s });
   },
-  exportSave: () => encodeExport(get().state),
-  importSave: (text) => {
-    try {
-      const s = decodeImport(text);
-      saveToStorage(s);
-      set({ state: s, ...derive(s), toasts: [], offline: null });
-      return true;
-    } catch {
-      return false;
-    }
+  exportSave: () => encodeTransfer(get().state),
+  loadState: (s) => {
+    saveToStorage(s);
+    set({ state: s, ...derive(s), toasts: [], offline: null });
   },
   hardReset: () => {
     clearStorage();

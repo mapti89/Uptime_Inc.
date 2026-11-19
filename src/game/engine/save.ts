@@ -63,6 +63,58 @@ export function decodeImport(text: string): GameState {
   return deserialize(new TextDecoder().decode(bytes));
 }
 
+// ---------------------------------------------------------------------------
+// Code de transfert compact : « UPT1. » + base64url(deflate-raw(JSON)).
+// ~7× plus court que l'ancien export, et sûr dans une URL. Le journal
+// d'événements (purement cosmétique) n'est pas transféré.
+// ---------------------------------------------------------------------------
+
+const COMPACT_PREFIX = 'UPT1.';
+
+function toBase64Url(bytes: Uint8Array): string {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromBase64Url(text: string): Uint8Array {
+  const b64 = text.replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+}
+
+async function pipe(bytes: Uint8Array, transform: GenericTransformStream): Promise<Uint8Array> {
+  const stream = new Blob([bytes]).stream().pipeThrough(transform as unknown as TransformStream<Uint8Array, Uint8Array>);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/** Code de transfert compact (repli sur l'ancien format si le navigateur ne sait pas compresser). */
+export async function encodeTransfer(s: GameState): Promise<string> {
+  if (typeof CompressionStream === 'undefined') return encodeExport(s);
+  const json = serialize({ ...s, log: [] });
+  const packed = await pipe(new TextEncoder().encode(json), new CompressionStream('deflate-raw'));
+  return COMPACT_PREFIX + toBase64Url(packed);
+}
+
+/**
+ * Lit un code de transfert, quel que soit son format : code compact, ancien export base64,
+ * ou lien de transfert complet (…#import=CODE). Tolère espaces et retours à la ligne.
+ */
+export async function decodeTransfer(text: string): Promise<GameState> {
+  let t = text.trim();
+  const hash = t.indexOf('#import=');
+  if (hash >= 0) t = decodeURIComponent(t.slice(hash + '#import='.length));
+  t = t.replace(/\s+/g, '');
+  if (!t.startsWith(COMPACT_PREFIX)) return decodeImport(t);
+  const json = await pipe(fromBase64Url(t.slice(COMPACT_PREFIX.length)), new DecompressionStream('deflate-raw'));
+  return deserialize(new TextDecoder().decode(json));
+}
+
+/** Lien qui ouvre le jeu et propose de charger la partie. */
+export function transferLink(code: string, base = `${location.origin}${location.pathname}`): string {
+  return `${base}#import=${code}`;
+}
+
 export function saveToStorage(s: GameState): void {
   try {
     s.lastSaved = Date.now();

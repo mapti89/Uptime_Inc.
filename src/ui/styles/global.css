@@ -1233,6 +1233,48 @@ dd {
   gap: 8px;
   align-items: center;
 }
+.save-title {
+  margin: 16px 0 8px;
+}
+.save-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.save-manual {
+  margin-top: 10px;
+}
+.save-manual summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 4px 0;
+}
+.save-manual .btn {
+  margin-top: 6px;
+}
+.import-compare {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+.import-card {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.import-card:first-child {
+  border-color: var(--accent);
+}
+.import-card h4 {
+  margin-bottom: 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
 .save-box {
   width: 100%;
   min-height: 70px;

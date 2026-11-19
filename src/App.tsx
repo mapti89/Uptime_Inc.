@@ -16,6 +16,7 @@ import { Settings } from './ui/components/Settings';
 import { Toasts } from './ui/components/Toasts';
 import { OfflineModal } from './ui/components/OfflineModal';
 import { EraTransition } from './ui/components/EraTransition';
+import { ImportConfirm } from './ui/components/ImportConfirm';
 import { EVENT_BY_ID } from './game/data/events';
 import { useGame } from './game/store';
 import { UPGRADES } from './game/data/upgrades';
@@ -283,6 +284,7 @@ export default function App() {
       <Toasts />
       <OfflineModal />
       <EraTransition />
+      <ImportConfirm />
     </div>
   );
 }

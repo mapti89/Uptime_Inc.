@@ -6,7 +6,7 @@ import { computeSnapshot } from '../src/game/engine/snapshot';
 import { newGame } from '../src/game/engine/state';
 import { tick } from '../src/game/engine/tick';
 import * as A from '../src/game/engine/actions';
-import { deserialize, serialize, encodeExport, decodeImport } from '../src/game/engine/save';
+import { deserialize, serialize, encodeExport, decodeImport, encodeTransfer, decodeTransfer, transferLink } from '../src/game/engine/save';
 import { simulateOffline } from '../src/game/engine/offline';
 import { sharesFor } from '../src/game/data/prestige';
 
@@ -167,5 +167,40 @@ describe('Cartes GPU PCIe', () => {
     const s = newGame();
     s.era = 4;
     expect(A.upgradeAvailable(s, 'pcigpu')).toBe(false);
+  });
+});
+
+describe('code de transfert compact', () => {
+  const sample = () => {
+    const s = newGame();
+    s.money = 123456.5;
+    s.era = 3;
+    s.owned = { pi: 12, tower: 3 };
+    s.upgrades = { premium: true };
+    s.log = [{ t: 1, msg: 'journal', kind: 'info' } as (typeof s.log)[number]];
+    return s;
+  };
+
+  it('fait un aller-retour sans perte (hors journal) et est bien plus court', async () => {
+    const s = sample();
+    const code = await encodeTransfer(s);
+    expect(code.startsWith('UPT1.')).toBe(true);
+    expect(code).toMatch(/^[A-Za-z0-9._-]+$/); // sûr dans une URL
+    expect(code.length).toBeLessThan(encodeExport(s).length);
+    expect(await decodeTransfer(code)).toEqual({ ...s, log: [] });
+  });
+
+  it('accepte un lien complet, des retours à la ligne et l’ancien format', async () => {
+    const s = sample();
+    const code = await encodeTransfer(s);
+    const link = transferLink(code, 'https://exemple.test/jeu/');
+    expect((await decodeTransfer(link)).money).toBe(s.money);
+    expect((await decodeTransfer(code.replace(/(.{40})/g, '$1\n'))).money).toBe(s.money);
+    expect(await decodeTransfer(encodeExport(s))).toEqual(s);
+  });
+
+  it('rejette un code tronqué', async () => {
+    const code = await encodeTransfer(sample());
+    await expect(decodeTransfer(code.slice(0, code.length / 2))).rejects.toThrow();
   });
 });
