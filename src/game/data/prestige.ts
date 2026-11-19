@@ -8,7 +8,15 @@ export interface PrestigeShopDef {
   cost: (lvl: number) => number;
 }
 
-export const SHARE_BONUS = 0.02; // +2 % de revenus par action détenue
+export const SHARE_BONUS = 0.02; // +2 % de revenus par action détenue…
+/** …jusqu'à ce seuil ; au-delà, le bonus suit la racine carrée du nombre d'actions. */
+export const SHARE_SOFTCAP = 1_000;
+
+/** Bonus de revenus (additif : 0.5 = +50 %) apporté par les actions détenues. */
+export function shareBonus(shares: number): number {
+  const eff = shares <= SHARE_SOFTCAP ? shares : SHARE_SOFTCAP * Math.sqrt(shares / SHARE_SOFTCAP);
+  return Math.max(0, eff) * SHARE_BONUS;
+}
 export const PRESTIGE_MIN_ERA = 4;
 
 export function sharesFor(runEarned: number): number {
@@ -42,9 +50,9 @@ export const PRESTIGE_SHOP: PrestigeShopDef[] = [
     cost: (l) => 8 * Math.pow(2.5, l),
   },
   {
-    id: 'headstart', name: 'Carnet d’adresses', icon: '📇', max: 2,
-    desc: 'Commencer directement à l’ère 2 (niveau 1) ou 3 (niveau 2).',
-    cost: (l) => [40, 800][l] ?? Infinity,
+    id: 'headstart', name: 'Carnet d’adresses', icon: '📇', max: 4,
+    desc: 'Commencer directement à l’ère 2, 3, 4 puis 5 selon le niveau.',
+    cost: (l) => [40, 800, 50_000, 5e6][l] ?? Infinity,
   },
   {
     id: 'keepResearch', name: 'Brevets', icon: '📑', max: 1,
@@ -60,6 +68,21 @@ export const PRESTIGE_SHOP: PrestigeShopDef[] = [
     id: 'cheaper', name: 'Centrale d’achat', icon: '🏷️', max: 10,
     desc: 'Tout l’équipement coûte −5 % par niveau.',
     cost: (l) => 20 * Math.pow(2.2, l),
+  },
+  {
+    id: 'logistics', name: 'Logistique orbitale', icon: '📦', max: 8,
+    desc: 'Capacité d’emport ×1,5 par niveau.',
+    cost: (l) => 1_000 * Math.pow(3, l),
+  },
+  {
+    id: 'cleanOrbit', name: 'Orbites propres', icon: '🧹', max: 6,
+    desc: 'Nettoyage des débris ×1,5 par niveau.',
+    cost: (l) => 2_000 * Math.pow(3, l),
+  },
+  {
+    id: 'probes', name: 'Sondes héritées', icon: '🛸', max: 8,
+    desc: 'Colonisation stellaire ×1,25 par niveau.',
+    cost: (l) => 1e5 * Math.pow(4, l),
   },
 ];
 

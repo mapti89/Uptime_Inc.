@@ -1846,3 +1846,274 @@ button,
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Conquête spatiale : ambiance par acte, décors procéduraux, jauges
+   --------------------------------------------------------------------------- */
+.app.act-space {
+  --accent: #6ec6ff;
+  --accent2: #9575ff;
+  --bg: #070b16;
+  --bg2: #0b1222;
+  --panel: #0e1628;
+  --panel2: #131d34;
+}
+.app.act-galaxy {
+  --accent: #c792ff;
+  --accent2: #ffab40;
+  --bg: #08061a;
+  --bg2: #0e0a24;
+  --panel: #120e2b;
+  --panel2: #191338;
+  --border: #2d2452;
+}
+
+.space-scene .star {
+  fill: #e3f2fd;
+  opacity: 0.75;
+}
+.space-scene .star.twinkle {
+  animation: twinkle 3.2s ease-in-out infinite;
+}
+@keyframes twinkle {
+  50% {
+    opacity: 0.15;
+  }
+}
+.space-scene .orbit-line {
+  fill: none;
+  stroke: rgba(110, 198, 255, 0.22);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 7;
+}
+.space-scene .orbit-line.geo {
+  stroke: rgba(149, 117, 255, 0.25);
+}
+.space-scene .orbit-line.claimed {
+  stroke: rgba(110, 198, 255, 0.55);
+  stroke-dasharray: none;
+}
+.space-scene .orbit-spin {
+  transform-box: view-box;
+  transform-origin: 470px 740px;
+  animation: orbitSway 26s ease-in-out infinite alternate;
+}
+.space-scene .orbit-spin.slower {
+  animation-duration: 48s;
+  animation-direction: alternate-reverse;
+}
+@keyframes orbitSway {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(3deg);
+  }
+}
+.space-scene .sat-panel {
+  fill: #1e3a8a;
+  stroke: #6ec6ff;
+  stroke-width: 0.8;
+}
+.space-scene .sat-body {
+  fill: #cfd8dc;
+}
+.space-scene .sat.station .sat-body {
+  fill: #eceff1;
+}
+.space-scene .sat-led {
+  fill: var(--led);
+  animation: sledBlink 1.6s steps(2) infinite;
+}
+.space-scene .sat-swarm {
+  fill: #b3e5fc;
+  opacity: 0.85;
+}
+.space-scene .debris {
+  fill: #90a4ae;
+  opacity: 0.7;
+}
+.space-scene .debris.hot {
+  fill: #ff8a65;
+  animation: sledBlink 0.9s steps(2) infinite;
+}
+.space-scene .clouds ellipse {
+  fill: rgba(255, 255, 255, 0.18);
+}
+.space-scene .crater {
+  fill: rgba(0, 0, 0, 0.18);
+}
+.space-scene .city-light {
+  fill: #ffe082;
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+.space-scene .mass-driver {
+  stroke: #ffe082;
+  stroke-width: 3;
+  stroke-dasharray: 2 6;
+  animation: dash 1.2s linear infinite;
+}
+@keyframes dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.space-scene .launch-trail {
+  fill: none;
+  stroke: rgba(255, 183, 77, 0.55);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: launchTrail 6s ease-out infinite;
+}
+@keyframes launchTrail {
+  60% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+.space-scene .rocket {
+  fill: #fff3e0;
+  filter: drop-shadow(0 0 6px #ffb74d);
+}
+.space-scene .sun-glow {
+  animation: pulse 5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes pulse {
+  50% {
+    transform: scale(1.06);
+  }
+}
+.space-scene .dyson-ring {
+  fill: none;
+  stroke: #ffab40;
+  stroke-width: 3;
+  stroke-dasharray: 3 5;
+  opacity: 0.8;
+}
+.space-scene .colony-halo {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0.7;
+}
+.space-scene .saturn-ring {
+  fill: none;
+  stroke: #ffe082;
+  stroke-width: 2;
+  opacity: 0.7;
+}
+.space-scene .asteroid {
+  fill: #8d6e63;
+  opacity: 0.6;
+}
+.space-scene .asteroid.mined {
+  fill: #ffd54f;
+  opacity: 1;
+}
+.space-scene .galaxy-spin {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: orbitSway 60s ease-in-out infinite alternate;
+}
+.space-scene .gstar {
+  fill: #9fa8da;
+  opacity: 0.45;
+}
+.space-scene .gstar.lit {
+  fill: #ffe082;
+  opacity: 1;
+  filter: drop-shadow(0 0 3px #ffb300);
+}
+.space-scene .dyson {
+  animation: pulse 3s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.space-scene .home-star {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+/* Écran de transition sans illustration : ciel procédural */
+.space-backdrop {
+  background:
+    radial-gradient(1px 1px at 12% 22%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 64% 14%, #fff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 82% 38%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 33% 58%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 48% 31%, #cfe8ff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 22% 76%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 91% 71%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 72% 86%, #cfe8ff 99%, transparent);
+  background-color: #02040a;
+}
+.space-backdrop.space-orbit {
+  background-image:
+    radial-gradient(circle at 30% 135%, #4fc3f7 0 38%, #1565c0 46%, rgba(79, 195, 247, 0.35) 49%, transparent 54%),
+    radial-gradient(1px 1px at 12% 22%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 64% 14%, #fff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 82% 38%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 48% 31%, #cfe8ff 99%, transparent);
+}
+.space-backdrop.space-system {
+  background-image:
+    radial-gradient(circle at 50% 42%, #fffde7 0 3%, #ffd54f 6%, rgba(255, 143, 0, 0.35) 14%, transparent 28%),
+    radial-gradient(1px 1px at 12% 22%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 64% 14%, #fff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 82% 38%, #fff 99%, transparent);
+}
+.space-backdrop.space-galaxy {
+  background-image:
+    radial-gradient(ellipse 45% 22% at 50% 42%, rgba(255, 224, 178, 0.9) 0, rgba(179, 136, 255, 0.4) 40%, transparent 70%),
+    radial-gradient(1px 1px at 12% 22%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 64% 14%, #fff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 82% 38%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 33% 58%, #fff 99%, transparent);
+}
+.victory .era-transition-kicker {
+  color: var(--money);
+}
+.victory-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.shop-transit {
+  font-size: 11px;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+.stat-pill.remote {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+.latency-tag {
+  margin-left: 6px;
+  font-size: 12px;
+  cursor: help;
+}
+.stars-gauge > .gauge-head,
+.stars-gauge > .bar,
+.stars-gauge > .gauge-hint {
+  display: block;
+}
+.stars-gauge > .gauge-head {
+  display: flex;
+}
+.stars-gauge > .bar {
+  margin-top: 4px;
+}

@@ -2,8 +2,16 @@ import { useState } from 'react';
 import { useGame } from '../../game/store';
 import { UPGRADES } from '../../game/data/upgrades';
 import { BUILDING_BY_ID } from '../../game/data/buildings';
-import { upgradeAvailable } from '../../game/engine/actions';
-import { money } from '../format';
+import { reqMissing, upgradeAvailable } from '../../game/engine/actions';
+import type { GameState, UpgradeReq } from '../../game/types';
+import { money, watts } from '../format';
+
+function reqLabel(s: GameState, req: UpgradeReq, missing: number): string {
+  if ('id' in req) return `encore ${missing} × ${BUILDING_BY_ID[req.id].name}`;
+  const what = req.usage === 'power' ? 'consommés' : 'de chaleur évacuée';
+  const peak = req.usage === 'power' ? s.stats.runPeakPower : s.stats.runPeakHeat;
+  return `atteindre ${watts(req.value)} ${what} (record : ${watts(peak)})`;
+}
 
 export function UpgradesGrid() {
   const s = useGame((g) => g.state);
@@ -17,7 +25,7 @@ export function UpgradesGrid() {
   const owned = UPGRADES.filter((u) => s.upgrades[u.id]);
   const affordable = available.filter((u) => u.cost * costMult <= s.money).length;
   const next = UPGRADES.filter((u) => !s.upgrades[u.id] && !upgradeAvailable(s, u.id) && u.era <= s.era && u.req)
-    .map((u) => ({ u, missing: u.req!.count - (s.owned[u.req!.id] ?? 0) }))
+    .map((u) => ({ u, missing: reqMissing(s, u.req!) }))
     .filter((x) => x.missing > 0)
     .sort((a, b) => a.u.cost - b.u.cost)
     .slice(0, 6);
@@ -57,7 +65,7 @@ export function UpgradesGrid() {
           <ul className="next-list">
             {next.map(({ u, missing }) => (
               <li key={u.id}>
-                {u.icon} {u.name} — encore {missing} × {BUILDING_BY_ID[u.req!.id].name}
+                {u.icon} {u.name} — {reqLabel(s, u.req!, missing)}
               </li>
             ))}
           </ul>

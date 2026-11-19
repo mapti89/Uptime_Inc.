@@ -14,7 +14,10 @@ export type Stat =
   | 'space'
   | 'traffic'
   | 'rd'
-  | 'autoClick';
+  | 'autoClick'
+  | 'lift'
+  | 'cleanup'
+  | 'replication';
 
 export type Category =
   | 'servers'
@@ -24,9 +27,10 @@ export type Category =
   | 'cooling'
   | 'space'
   | 'sales'
-  | 'staff';
+  | 'staff'
+  | 'orbit';
 
-export type Flag = 'ups' | 'generator' | 'antiddos' | 'solar' | 'raid';
+export type Flag = 'ups' | 'generator' | 'antiddos' | 'solar' | 'raid' | 'wormhole';
 
 export interface Provides {
   cpu?: number; // vCPU
@@ -43,6 +47,9 @@ export interface Provides {
   repair?: number; // fraction de dégâts réparés / s
   efficiency?: number; // bonus additif d'efficacité (0.02 = +2 %)
   reliability?: number; // réduction multiplicative du risque de panne (0.05 = -5 %)
+  lift?: number; // tonnes de capacité d'emport (matériel spatial en service)
+  cleanup?: number; // tonnes de débris orbitaux neutralisées
+  replication?: number; // taux de colonisation stellaire (/s)
 }
 
 export interface BuildingDef {
@@ -64,6 +71,14 @@ export interface BuildingDef {
   flags?: Flag[];
   /** Nombre max possédé (optionnel). */
   max?: number;
+  /** Masse lancée par unité (t) : consomme la capacité d'emport au lieu de l'espace. */
+  mass?: number;
+  /** Débris orbitaux générés par unité (t). */
+  debris?: number;
+  /** Installé loin de la Terre : ne sert que les requêtes tolérantes à la latence. */
+  remote?: boolean;
+  /** Durée du voyage (s) avant d'être opérationnel. */
+  travel?: number;
 }
 
 export type Effect =
@@ -88,7 +103,15 @@ export type Effect =
   | { kind: 'sla'; level: number }
   | { kind: 'costMult'; mult: number; cat?: Category }
   | { kind: 'rdFromRequests'; add: number }
-  | { kind: 'revenueMult'; mult: number };
+  | { kind: 'revenueMult'; mult: number }
+  /** Masse des équipements spatiaux. */
+  | { kind: 'massMult'; mult: number }
+  /** Part de la capacité lointaine utilisable par les requêtes temps réel. */
+  | { kind: 'latencyBridge'; add: number };
+
+export type UpgradeReq =
+  | { id: string; count: number }
+  | { usage: 'power' | 'heat'; value: number };
 
 export interface UpgradeDef {
   id: string;
@@ -97,8 +120,12 @@ export interface UpgradeDef {
   icon: string;
   cost: number;
   era: number;
-  /** Bâtiment requis + quantité pour débloquer l'upgrade. */
-  req?: { id: string; count: number };
+  /**
+   * Condition de déblocage : posséder N exemplaires d'un bâtiment, ou avoir
+   * atteint pendant la partie un record de consommation (`power`, en W) ou de
+   * chaleur évacuée (`heat`, en W).
+   */
+  req?: UpgradeReq;
   effects: Effect[];
 }
 
@@ -123,6 +150,8 @@ export interface RequestTypeDef {
   weight: number; // part de trafic attribuée
   needs: Partial<Record<Res, number>>; // ressources par requête/s
   color: string;
+  /** Tolère la latence interplanétaire : peut être servie par du matériel lointain. */
+  tolerant?: boolean;
 }
 
 export interface EraDef {
@@ -141,6 +170,10 @@ export interface EraDef {
     cooling: number;
     bw: number;
     traffic: number;
+    /** Capacité d'emport de base (t). */
+    lift?: number;
+    /** Nettoyage orbital de base (t de débris). */
+    cleanup?: number;
   };
   /** Part de référence du chiffre d'affaires consacrée à l'énergie (PUE 1,5). */
   energyShare: number;
@@ -192,6 +225,9 @@ export interface Stats {
   peakIncome: number;
   peakReqs: number;
   moneySpent: number;
+  /** Records de la partie en cours (remis à zéro à l'introduction en bourse). */
+  runPeakPower: number;
+  runPeakHeat: number;
 }
 
 export interface GameState {
@@ -224,6 +260,16 @@ export interface GameState {
     autoUpgrades: boolean;
   };
   lastSaved: number;
+  /** Équipements en route (voyage interstellaire). */
+  transit: Transit[];
+  /** Étoiles colonisées (ère 11+). */
+  stars: number;
+}
+
+export interface Transit {
+  id: string;
+  count: number;
+  remaining: number;
 }
 
 /** Résultat du calcul d'un instant (non sauvegardé). */
@@ -244,12 +290,26 @@ export interface Snapshot {
   powerCap: number;
   heat: number;
   coolCap: number;
+  /** Chaleur réellement évacuée : min(chaleur, capacité de refroidissement). */
+  heatDissipated: number;
   pue: number;
   powerFactor: number;
   coolFactor: number;
   efficiency: number;
   slotsUsed: number;
   slotsCap: number;
+  /** Masse en orbite ou en route (t) / capacité d'emport. */
+  massUsed: number;
+  liftCap: number;
+  /** Débris orbitaux générés / capacité de nettoyage. */
+  debris: number;
+  cleanupCap: number;
+  debrisFactor: number;
+  /** Capacité servant uniquement les requêtes tolérantes (matériel lointain). */
+  remoteSupply: Record<Res, number>;
+  replication: number;
+  /** Bonus de demande lié à la colonisation stellaire. */
+  starMult: number;
   traffic: number;
   rdRate: number;
   autoClick: number;

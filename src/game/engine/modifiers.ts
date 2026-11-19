@@ -2,7 +2,7 @@ import type { BuildingDef, Category, Effect, Flag, GameState, Provides, Res, Sta
 import { UPGRADE_BY_ID } from '../data/upgrades';
 import { RESEARCH_BY_ID } from '../data/research';
 import { ACHIEVEMENT_BONUS } from '../data/achievements';
-import { SHARE_BONUS } from '../data/prestige';
+import { shareBonus } from '../data/prestige';
 import { BUILDINGS } from '../data/buildings';
 
 /** Agrégat de tous les effets actifs (upgrades, recherche, prestige, succès). */
@@ -32,6 +32,8 @@ export interface Modifiers {
   costByCat: Partial<Record<Category, number>>;
   rdFromRequests: number;
   revenue: number;
+  mass: number;
+  latencyBridge: number;
 }
 
 export function emptyModifiers(): Modifiers {
@@ -39,7 +41,7 @@ export function emptyModifiers(): Modifiers {
     building: {},
     buildingAdd: {},
     cat: {},
-    stat: { cpu: 1, ram: 1, storage: 1, gpu: 1, bw: 1, power: 1, cooling: 1, space: 1, traffic: 1, rd: 1, autoClick: 1 },
+    stat: { cpu: 1, ram: 1, storage: 1, gpu: 1, bw: 1, power: 1, cooling: 1, space: 1, traffic: 1, rd: 1, autoClick: 1, lift: 1, cleanup: 1, replication: 1 },
     price: 1,
     priceByType: {},
     demand: 1,
@@ -60,6 +62,8 @@ export function emptyModifiers(): Modifiers {
     costByCat: {},
     rdFromRequests: 0,
     revenue: 1,
+    mass: 1,
+    latencyBridge: 0,
   };
 }
 
@@ -133,6 +137,12 @@ export function applyEffect(m: Modifiers, e: Effect): void {
     case 'revenueMult':
       m.revenue *= e.mult;
       break;
+    case 'massMult':
+      m.mass *= e.mult;
+      break;
+    case 'latencyBridge':
+      m.latencyBridge = Math.min(1, m.latencyBridge + e.add);
+      break;
   }
 }
 
@@ -162,10 +172,13 @@ export function computeModifiers(s: GameState): Modifiers {
   // Prestige
   const shop = s.prestige.shop;
   const achCount = Object.keys(s.achievements).length;
-  m.revenue *= 1 + s.prestige.shares * SHARE_BONUS;
+  m.revenue *= 1 + shareBonus(s.prestige.shares);
   m.revenue *= 1 + achCount * ACHIEVEMENT_BONUS;
   m.revenue *= 1 + 0.25 * (shop.veteran ?? 0);
   m.click *= Math.pow(3, shop.clicker ?? 0);
   m.cost *= Math.pow(0.95, shop.cheaper ?? 0);
+  m.stat.lift *= Math.pow(1.5, shop.logistics ?? 0);
+  m.stat.cleanup *= Math.pow(1.5, shop.cleanOrbit ?? 0);
+  m.stat.replication *= Math.pow(1.25, shop.probes ?? 0);
   return m;
 }

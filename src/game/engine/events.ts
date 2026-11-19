@@ -9,10 +9,15 @@ export type Rng = () => number;
 const MIN_GAP = 70;
 const MAX_GAP = 200;
 
-function pickEvent(s: GameState, m: Modifiers, rng: Rng) {
+function pickEvent(s: GameState, m: Modifiers, snap: Snapshot, rng: Rng) {
   const ff = failureFactor(s, m);
   const pool = EVENTS.filter((e) => e.era <= s.era && !s.events.some((a) => a.defId === e.id));
-  const weights = pool.map((e) => (e.good ? e.weight : e.weight * ff));
+  // Les collisions en cascade dépendent de la saturation en débris.
+  const debrisLoad = snap.cleanupCap > 0 ? snap.debris / snap.cleanupCap : 0;
+  const weights = pool.map((e) => {
+    if (e.id === 'kessler') return e.weight * ff * Math.min(6, debrisLoad * debrisLoad);
+    return e.good ? e.weight : e.weight * ff;
+  });
   const total = weights.reduce((a, b) => a + b, 0);
   if (total <= 0) return null;
   let r = rng() * total;
@@ -42,6 +47,21 @@ export function triggerEvent(s: GameState, id: string, m: Modifiers, snap: Snaps
     case 'investor':
       s.money += Math.max(100, snap.net * 90);
       break;
+    case 'launchwindow':
+      s.money += Math.max(100, snap.net * 120);
+      break;
+    case 'launchfail':
+      s.damage = Math.min(0.9, s.damage + 0.08);
+      break;
+    case 'kessler':
+      s.damage = Math.min(0.9, s.damage + 0.15);
+      break;
+    case 'moonquake':
+      s.damage = Math.min(0.9, s.damage + 0.06);
+      break;
+    case 'supernova':
+      s.damage = Math.min(0.9, s.damage + 0.1);
+      break;
     case 'audit':
       s.reputation = Math.min(100, s.reputation + 10);
       break;
@@ -67,7 +87,7 @@ export function tickEvents(s: GameState, dt: number, m: Modifiers, snap: Snapsho
     s.nextEventIn = MIN_GAP + rng() * (MAX_GAP - MIN_GAP);
     // Pas d'événement tant que le joueur démarre à peine
     if (s.stats.runTime < 120) return;
-    const def = pickEvent(s, m, rng);
+    const def = pickEvent(s, m, snap, rng);
     if (def) triggerEvent(s, def.id, m, snap);
   }
 }

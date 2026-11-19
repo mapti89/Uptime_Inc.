@@ -16,6 +16,7 @@ import { Settings } from './ui/components/Settings';
 import { Toasts } from './ui/components/Toasts';
 import { OfflineModal } from './ui/components/OfflineModal';
 import { EraTransition } from './ui/components/EraTransition';
+import { Victory } from './ui/components/Victory';
 import { ImportConfirm } from './ui/components/ImportConfirm';
 import { EVENT_BY_ID } from './game/data/events';
 import { useGame } from './game/store';
@@ -271,7 +272,7 @@ export default function App() {
   const mode: MobileMode | null = hinge ? { kind: 'flex', hinge } : !narrow ? null : wide ? { kind: 'wide' } : { kind: 'phone' };
 
   return (
-    <div className={`app era-${era} ${mode ? `is-mobile m-${mode.kind}` : ''}`}>
+    <div className={`app era-${era} ${era >= 11 ? 'act-galaxy' : era >= 7 ? 'act-space' : ''} ${mode ? `is-mobile m-${mode.kind}` : ''}`}>
       {mode ? (
         <MobileLayout mode={mode} />
       ) : (
@@ -284,6 +285,7 @@ export default function App() {
       <Toasts />
       <OfflineModal />
       <EraTransition />
+      <Victory />
       <ImportConfirm />
     </div>
   );

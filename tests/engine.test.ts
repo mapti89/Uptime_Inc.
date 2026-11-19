@@ -204,3 +204,159 @@ describe('code de transfert compact', () => {
     await expect(decodeTransfer(code.slice(0, code.length / 2))).rejects.toThrow();
   });
 });
+
+describe('électricité, refroidissement et espace (v2)', () => {
+  it('aucun succès ne demande d’empiler de l’infrastructure', async () => {
+    const { ACHIEVEMENTS } = await import('../src/game/data/achievements');
+    const infra = ['power', 'cooling', 'space'];
+    const bad = ACHIEVEMENTS.filter((a) => {
+      const m = /^own_(.+)_(\d+)$/.exec(a.id);
+      return m && m[2] !== '1' && infra.includes(BUILDING_BY_ID[m[1]].cat);
+    });
+    expect(bad).toEqual([]);
+  });
+
+  it('le PUE dépend de la charge réelle : les groupes sobres passent en premier', () => {
+    const s = newGame();
+    s.era = 5;
+    s.owned = { gpunode: 20, crac: 30 };
+    const pueOf = () => computeSnapshot(s, computeModifiers(s)).pue;
+    const cracOnly = pueOf();
+    // Un groupe plus sobre qui prend réellement la charge fait baisser le PUE.
+    s.owned.liquid = 1;
+    const withLiquid = pueOf();
+    expect(withLiquid).toBeLessThan(cracOnly);
+    // Sur-construire au-delà du besoin le dégrade (consommation à vide).
+    s.owned.liquid = 100;
+    expect(pueOf()).toBeGreaterThan(withLiquid);
+  });
+
+  it('les améliorations d’électricité se débloquent au record de consommation', () => {
+    const s = newGame();
+    expect(A.upgradeAvailable(s, 'power_u1')).toBe(false);
+    s.stats.runPeakPower = 300;
+    expect(A.upgradeAvailable(s, 'power_u1')).toBe(true);
+    expect(A.upgradeAvailable(s, 'cooling_u1')).toBe(false);
+    s.stats.runPeakHeat = 1e6;
+    expect(A.upgradeAvailable(s, 'cooling_u1')).toBe(true);
+    expect(A.upgradeAvailable(s, 'cooling_u2')).toBe(false); // ère 2 requise
+  });
+
+  it('le record de la partie est mis à jour par le tick et remis à zéro par le prestige', () => {
+    const s = newGame();
+    tick(s, 1);
+    expect(s.stats.runPeakPower).toBeGreaterThan(0);
+    expect(s.stats.runPeakHeat).toBeGreaterThan(0);
+    s.era = 4;
+    s.runEarned = 1e12;
+    const ns = A.doPrestige(s)!;
+    expect(ns.stats.runPeakPower).toBe(0);
+  });
+
+  it('migre une sauvegarde v1 : anciens succès retirés, paliers remboursés', () => {
+    const s = newGame();
+    const raw = JSON.parse(serialize(s));
+    raw.version = 1;
+    raw.money = 10;
+    raw.achievements = { earn_0: 1, own_fan_50: 2, own_campus_100: 3 };
+    raw.upgrades = { fan_t1: true, premium: true, pi_t1: true };
+    const out = deserialize(JSON.stringify(raw));
+    expect(out.achievements).toEqual({ earn_0: 1 });
+    expect(out.upgrades).toEqual({ premium: true, pi_t1: true });
+    expect(out.money).toBe(10 + BUILDING_BY_ID.fan.baseCost * 100);
+    expect(out.stats.runPeakPower).toBe(0);
+  });
+});
+
+describe('conquête spatiale', () => {
+  const spaceGame = (era: number) => {
+    const s = newGame();
+    s.era = era;
+    s.money = 1e40;
+    s.runEarned = 1e40;
+    return s;
+  };
+
+  it('le matériel spatial consomme la capacité d’emport et se bloque sans lanceur', () => {
+    const s = spaceGame(7);
+    const m = computeModifiers(s);
+    const snap = computeSnapshot(s, m);
+    expect(snap.liftCap).toBe(50);
+    // 50 t d'emport de base : deux datacenters orbitaux de 20 t, pas trois.
+    expect(A.buyBuilding(s, 'orbital', 1)).toBe(true);
+    expect(A.buyBuilding(s, 'orbital', 1)).toBe(true);
+    expect(A.quoteBuilding(s, BUILDING_BY_ID.orbital, 1).blocked).toBe('lift');
+    expect(A.buyBuilding(s, 'launchpad', 1)).toBe(true);
+    expect(A.quoteBuilding(s, BUILDING_BY_ID.orbital, 1).blocked).toBeUndefined();
+  });
+
+  it('les débris au-delà du nettoyage dégradent l’efficacité', () => {
+    const s = spaceGame(8);
+    s.owned = { swarm: 4, superheavy: 2 };
+    const ok = computeSnapshot(s, computeModifiers(s));
+    expect(ok.debrisFactor).toBe(1);
+    s.owned.swarm = 20;
+    const bad = computeSnapshot(s, computeModifiers(s));
+    expect(bad.debris).toBeGreaterThan(bad.cleanupCap);
+    expect(bad.debrisFactor).toBeLessThan(1);
+    s.owned.debristug = 10;
+    expect(computeSnapshot(s, computeModifiers(s)).debrisFactor).toBe(1);
+  });
+
+  it('le matériel lointain ne sert que les requêtes tolérantes à la latence', () => {
+    const s = spaceGame(10);
+    s.owned = { marsdc: 50, fusionfreighter: 5, deepnet: 20, marscolonies: 3 };
+    s.reputation = 100;
+    const snap = computeSnapshot(s, computeModifiers(s));
+    expect(snap.remoteSupply.cpu).toBeGreaterThan(0);
+    // Pas de matériel proche : rien de temps réel n'est servi…
+    expect(snap.served.static).toBe(0);
+    // …mais les simulations scientifiques (tolérantes) le sont.
+    expect(snap.served.scisim).toBeGreaterThan(0);
+    // Un trou de ver supprime la contrainte.
+    s.owned.wormhole = 1;
+    s.era = 11;
+    expect(computeSnapshot(s, computeModifiers(s)).served.static).toBeGreaterThan(0);
+  });
+
+  it('le matériel interstellaire voyage avant d’être opérationnel', () => {
+    const s = spaceGame(11);
+    s.owned = { lasersail: 3 };
+    expect(A.buyBuilding(s, 'stellarnode', 1)).toBe(true);
+    expect(s.owned.stellarnode ?? 0).toBe(0);
+    expect(A.inTransit(s, 'stellarnode')).toBe(1);
+    // Le prix suit aussi les exemplaires en route.
+    const before = A.quoteBuilding(s, BUILDING_BY_ID.stellarnode, 1).cost;
+    expect(before).toBeCloseTo(BUILDING_BY_ID.stellarnode.baseCost * BUILDING_BY_ID.stellarnode.growth, -10);
+    tick(s, BUILDING_BY_ID.stellarnode.travel! + 1, { rng: () => 0.5 });
+    expect(s.owned.stellarnode).toBe(1);
+    expect(s.transit).toEqual([]);
+  });
+
+  it('les sondes colonisent les étoiles, plafonnées par l’ère, jusqu’à la galaxie entière', async () => {
+    const { GALAXY_STARS, starCap } = await import('../src/game/data/galaxy');
+    const s = spaceGame(10);
+    expect(A.moveEra(s)).toBe(true);
+    expect(s.era).toBe(11);
+    expect(s.stars).toBe(1);
+    s.owned.vonneumann = 50;
+    for (let i = 0; i < 200; i++) tick(s, 60, { rng: () => 0.99 });
+    expect(s.stars).toBe(starCap(11));
+    s.era = 12;
+    s.owned.seedship = 50;
+    for (let i = 0; i < 400; i++) tick(s, 60, { rng: () => 0.99 });
+    expect(s.stars).toBe(GALAXY_STARS);
+    expect(s.achievements.galaxy).toBeDefined();
+    // La colonisation repart de zéro à l'introduction en bourse.
+    expect(A.doPrestige(s)!.stars).toBe(0);
+  });
+});
+
+describe('bonus des actions', () => {
+  it('reste linéaire jusqu’au seuil puis suit la racine carrée', async () => {
+    const { shareBonus, SHARE_BONUS, SHARE_SOFTCAP } = await import('../src/game/data/prestige');
+    expect(shareBonus(100)).toBeCloseTo(100 * SHARE_BONUS);
+    expect(shareBonus(SHARE_SOFTCAP)).toBeCloseTo(SHARE_SOFTCAP * SHARE_BONUS);
+    expect(shareBonus(SHARE_SOFTCAP * 100)).toBeCloseTo(SHARE_SOFTCAP * 10 * SHARE_BONUS);
+  });
+});

@@ -50,6 +50,41 @@ export const RESEARCH: ResearchDef[] = [
   { id: 'brand', branch: 'business', name: 'Image de marque', icon: '🏷️', era: 4, cost: 20_000, prereq: ['sla9999'], desc: 'Demande ×1,5, prix ×1,25.', effects: [{ kind: 'demandMult', mult: 1.5 }, { kind: 'priceMult', mult: 1.25 }] },
   { id: 'sla99999', branch: 'business', name: 'SLA 99,999 %', icon: '🥇', era: 5, cost: 250_000, prereq: ['brand'], desc: 'Bonus +100 % si uptime ≥ 99,999 %.', effects: [{ kind: 'sla', level: 3 }] },
   { id: 'ecosystem', branch: 'business', name: 'Écosystème', icon: '🌳', era: 6, cost: 1e7, prereq: ['sla99999'], desc: 'Demande ×3, revenus ×1,5.', effects: [{ kind: 'demandMult', mult: 3 }, { kind: 'revenueMult', mult: 1.5 }] },
+  // --- Conquête spatiale (ères 7 à 12) ---
+  { id: 'radsoft', branch: 'logiciel', name: 'Logiciel tolérant aux radiations', icon: '☢️', era: 7, cost: 3e8, prereq: ['agi'], desc: 'Pannes −30 %, efficacité +10 %.', effects: [{ kind: 'failureMult', mult: 0.7 }, { kind: 'efficiency', add: 0.1 }] },
+  { id: 'swarmos', branch: 'logiciel', name: 'OS d’essaim', icon: '🐝', era: 8, cost: 6e9, prereq: ['radsoft'], desc: 'Efficacité +25 %.', effects: [{ kind: 'efficiency', add: 0.25 }] },
+  { id: 'dtn', branch: 'logiciel', name: 'Réseau tolérant aux délais', icon: '📨', era: 9, cost: 1.2e11, prereq: ['swarmos'], desc: 'Besoin en bande passante −30 %, revenus ×1,5.', effects: [{ kind: 'needMult', res: 'bw', mult: 0.7 }, { kind: 'revenueMult', mult: 1.5 }] },
+  { id: 'predictcache', branch: 'logiciel', name: 'Cache prédictif interplanétaire', icon: '🔮', era: 10, cost: 2.5e12, prereq: ['dtn'], desc: '25 % de la capacité lointaine sert aussi les requêtes temps réel.', effects: [{ kind: 'latencyBridge', add: 0.25 }] },
+  { id: 'selfrep', branch: 'logiciel', name: 'Code auto-réplicant', icon: '🧬', era: 11, cost: 5e13, prereq: ['predictcache'], desc: 'Colonisation ×1,5, efficacité +25 %.', effects: [{ kind: 'statMult', stat: 'replication', mult: 1.5 }, { kind: 'efficiency', add: 0.25 }] },
+  { id: 'universalcalc', branch: 'logiciel', name: 'Calcul universel', icon: '♾️', era: 12, cost: 1e15, prereq: ['selfrep'], desc: 'Revenus ×2, colonisation ×1,5.', effects: [{ kind: 'revenueMult', mult: 2 }, { kind: 'statMult', stat: 'replication', mult: 1.5 }] },
+
+  { id: 'radchips', branch: 'materiel', name: 'Puces durcies', icon: '🛡️', era: 7, cost: 3e8, prereq: ['photonic'], desc: 'CPU ×1,5, GPU ×1,5.', effects: [{ kind: 'statMult', stat: 'cpu', mult: 1.5 }, { kind: 'statMult', stat: 'gpu', mult: 1.5 }] },
+  { id: 'miniaturize', branch: 'materiel', name: 'Miniaturisation', icon: '🔬', era: 8, cost: 6e9, prereq: ['radchips'], desc: 'Masse des équipements spatiaux −25 %.', effects: [{ kind: 'massMult', mult: 0.75 }] },
+  { id: 'regolith', branch: 'materiel', name: 'Impression 3D en régolithe', icon: '🖨️', era: 9, cost: 1.2e11, prereq: ['miniaturize'], desc: 'Programme spatial −30 %, masse −20 %.', effects: [{ kind: 'costMult', cat: 'orbit', mult: 0.7 }, { kind: 'massMult', mult: 0.8 }] },
+  { id: 'asteroidmining', branch: 'materiel', name: 'Minage d’astéroïdes', icon: '⛏️', era: 10, cost: 2.5e12, prereq: ['regolith'], desc: 'Tout l’équipement coûte −30 %.', effects: [{ kind: 'costMult', mult: 0.7 }] },
+  { id: 'computronium', branch: 'materiel', name: 'Computronium', icon: '🧱', era: 11, cost: 5e13, prereq: ['asteroidmining'], desc: 'CPU ×2, GPU ×2.', effects: [{ kind: 'statMult', stat: 'cpu', mult: 2 }, { kind: 'statMult', stat: 'gpu', mult: 2 }] },
+  { id: 'strangematter', branch: 'materiel', name: 'Matière étrange', icon: '🟣', era: 12, cost: 1e15, prereq: ['computronium'], desc: 'RAM ×3, stockage ×3.', effects: [{ kind: 'statMult', stat: 'ram', mult: 3 }, { kind: 'statMult', stat: 'storage', mult: 3 }] },
+
+  { id: 'spacesolar', branch: 'energie', name: 'Solaire spatial', icon: '☀️', era: 7, cost: 3e8, prereq: ['superconductor'], desc: 'Capacité électrique ×1,5.', effects: [{ kind: 'statMult', stat: 'power', mult: 1.5 }] },
+  { id: 'radiatorfins', branch: 'energie', name: 'Ailettes à haute émissivité', icon: '🪶', era: 8, cost: 6e9, prereq: ['spacesolar'], desc: 'Refroidissement ×1,5.', effects: [{ kind: 'statMult', stat: 'cooling', mult: 1.5 }] },
+  { id: 'he3fusion', branch: 'energie', name: 'Fusion aneutronique', icon: '⚛️', era: 9, cost: 1.2e11, prereq: ['radiatorfins'], desc: 'Capacité électrique ×2, électricité −20 %.', effects: [{ kind: 'statMult', stat: 'power', mult: 2 }, { kind: 'elecPriceMult', mult: 0.8 }] },
+  { id: 'solarwind', branch: 'energie', name: 'Récolte du vent solaire', icon: '🌬️', era: 10, cost: 2.5e12, prereq: ['he3fusion'], desc: 'Électricité −30 %, refroidissement ×1,5.', effects: [{ kind: 'elecPriceMult', mult: 0.7 }, { kind: 'statMult', stat: 'cooling', mult: 1.5 }] },
+  { id: 'starlifting', branch: 'energie', name: 'Ascension stellaire', icon: '🌟', era: 11, cost: 5e13, prereq: ['solarwind'], desc: 'Capacité électrique ×2, refroidissement ×2.', effects: [{ kind: 'statMult', stat: 'power', mult: 2 }, { kind: 'statMult', stat: 'cooling', mult: 2 }] },
+  { id: 'penrose', branch: 'energie', name: 'Processus de Penrose', icon: '🕳️', era: 12, cost: 1e15, prereq: ['starlifting'], desc: 'On extrait l’énergie de rotation d’un trou noir : capacité électrique ×3.', effects: [{ kind: 'statMult', stat: 'power', mult: 3 }] },
+
+  { id: 'opticlinks', branch: 'reseau', name: 'Liaisons optiques spatiales', icon: '🔆', era: 7, cost: 3e8, prereq: ['quantumnet'], desc: 'Bande passante ×2.', effects: [{ kind: 'statMult', stat: 'bw', mult: 2 }] },
+  { id: 'debrisradar', branch: 'reseau', name: 'Radar de surveillance orbitale', icon: '📡', era: 8, cost: 6e9, prereq: ['opticlinks'], desc: 'Nettoyage des débris ×2.', effects: [{ kind: 'statMult', stat: 'cleanup', mult: 2 }] },
+  { id: 'lunarlaser', branch: 'reseau', name: 'Laser Terre-Lune', icon: '🌙', era: 9, cost: 1.2e11, prereq: ['debrisradar'], desc: 'Bande passante ×3.', effects: [{ kind: 'statMult', stat: 'bw', mult: 3 }] },
+  { id: 'interplanetnet', branch: 'reseau', name: 'Internet interplanétaire', icon: '🪐', era: 10, cost: 2.5e12, prereq: ['lunarlaser'], desc: '25 % de la capacité lointaine sert aussi les requêtes temps réel, bande passante ×2.', effects: [{ kind: 'latencyBridge', add: 0.25 }, { kind: 'statMult', stat: 'bw', mult: 2 }] },
+  { id: 'entanglement', branch: 'reseau', name: 'Réseau d’intrication', icon: '🔗', era: 11, cost: 5e13, prereq: ['interplanetnet'], desc: 'Bande passante ×5.', effects: [{ kind: 'statMult', stat: 'bw', mult: 5 }] },
+  { id: 'galacticbackbone', branch: 'reseau', name: 'Épine dorsale galactique', icon: '🌌', era: 12, cost: 1e15, prereq: ['entanglement'], desc: 'Bande passante ×10, demande ×2.', effects: [{ kind: 'statMult', stat: 'bw', mult: 10 }, { kind: 'demandMult', mult: 2 }] },
+
+  { id: 'spacelaw', branch: 'business', name: 'Droit spatial', icon: '⚖️', era: 7, cost: 3e8, prereq: ['ecosystem'], desc: 'Demande ×2, prix ×1,25.', effects: [{ kind: 'demandMult', mult: 2 }, { kind: 'priceMult', mult: 1.25 }] },
+  { id: 'orbitalfreq', branch: 'business', name: 'Licences de fréquences', icon: '📻', era: 8, cost: 6e9, prereq: ['spacelaw'], desc: 'Demande ×2.', effects: [{ kind: 'demandMult', mult: 2 }] },
+  { id: 'lunarexchange', branch: 'business', name: 'Bourse lunaire', icon: '💹', era: 9, cost: 1.2e11, prereq: ['orbitalfreq'], desc: 'Prix ×1,5, lanceurs −25 %.', effects: [{ kind: 'priceMult', mult: 1.5 }, { kind: 'costMult', cat: 'orbit', mult: 0.75 }] },
+  { id: 'solarconcession', branch: 'business', name: 'Concession du système solaire', icon: '📜', era: 10, cost: 2.5e12, prereq: ['lunarexchange'], desc: 'Demande ×3.', effects: [{ kind: 'demandMult', mult: 3 }] },
+  { id: 'xenodiplomacy', branch: 'business', name: 'Xénodiplomatie', icon: '🤝', era: 11, cost: 5e13, prereq: ['solarconcession'], desc: 'Prix ×2.', effects: [{ kind: 'priceMult', mult: 2 }] },
+  { id: 'kardashev', branch: 'business', name: 'Civilisation de type III', icon: '🏆', era: 12, cost: 1e15, prereq: ['xenodiplomacy'], desc: 'Revenus ×3.', effects: [{ kind: 'revenueMult', mult: 3 }] },
 ];
 
 export const RESEARCH_BY_ID: Record<string, ResearchDef> = Object.fromEntries(

@@ -2,7 +2,8 @@ import { useGame } from '../../game/store';
 import { RESOURCES, type Category, type Provides, type Res } from '../../game/types';
 import { CATEGORIES } from '../../game/data/buildings';
 import { useUi } from '../uiStore';
-import { RES_LABEL, fmt, pct, resValue, watts } from '../format';
+import { RES_LABEL, fmt, mass, pct, resValue, watts } from '../format';
+import { GALAXY_STARS, starCap } from '../../game/data/galaxy';
 
 function Gauge({
   label,
@@ -74,6 +75,7 @@ const RES_SHOP: Record<Res, [Category, keyof Provides]> = {
 export function ResourceGauges() {
   const snap = useGame((g) => g.snap);
   const era = useGame((g) => g.state.era);
+  const stars = useGame((g) => g.state.stars);
   return (
     <div className="panel gauges">
       <h3>📟 Ressources</h3>
@@ -85,6 +87,11 @@ export function ResourceGauges() {
           used={snap.need[r]}
           cap={snap.supply[r]}
           text={`${resValue(r, snap.need[r])} / ${resValue(r, snap.supply[r])}`}
+          hint={
+            snap.remoteSupply[r] > 0
+              ? `dont ${resValue(r, snap.remoteSupply[r])} lointains (requêtes tolérantes à la latence uniquement)`
+              : undefined
+          }
           go={RES_SHOP[r]}
         />
       ))}
@@ -112,6 +119,43 @@ export function ResourceGauges() {
         text={`${fmt(snap.slotsUsed)} / ${fmt(snap.slotsCap)} U`}
         go={['space', 'space']}
       />
+      {era >= 7 && (
+        <Gauge
+          label="🚀 Emport"
+          used={snap.massUsed}
+          cap={snap.liftCap}
+          text={`${mass(snap.massUsed)} / ${mass(snap.liftCap)}`}
+          hint="Masse du matériel spatial (en service ou en route) / capacité de vos lanceurs."
+          go={['orbit', 'lift']}
+        />
+      )}
+      {era >= 7 && snap.debris > 0 && (
+        <Gauge
+          label="🛰️ Débris orbitaux"
+          used={snap.debris}
+          cap={snap.cleanupCap}
+          text={`${mass(snap.debris)} / ${mass(snap.cleanupCap)}`}
+          hint="Débris générés / capacité de nettoyage. Au-delà, les collisions dégradent tout le parc."
+          go={['orbit', 'cleanup']}
+        />
+      )}
+      {era >= 11 && (
+        <div className="gauge stars-gauge">
+          <span className="gauge-head">
+            <span>🌌 Étoiles colonisées</span>
+            <span className="gauge-val good">
+              {fmt(stars)} / {fmt(starCap(era))}
+            </span>
+          </span>
+          <span className="bar thin">
+            <span className="bar-fill era" style={{ width: `${(Math.log10(Math.max(1, stars)) / Math.log10(GALAXY_STARS)) * 100}%` }} />
+          </span>
+          <span className="gauge-hint">
+            Croissance +{(snap.replication * 100).toFixed(2)} %/s · demande ×{snap.starMult.toFixed(2)}
+            {era === 11 && ' · la galaxie entière s’ouvre à l’ère suivante'}
+          </span>
+        </div>
+      )}
       <div className="kv-grid">
         <span>PUE</span>
         <strong className={snap.pue > 1.6 ? 'bad' : snap.pue < 1.25 ? 'good' : ''}>{snap.pue.toFixed(2)}</strong>
@@ -125,6 +169,12 @@ export function ResourceGauges() {
           <>
             <span className="bad">Sous-alimentation</span>
             <strong className="bad">{pct(snap.powerFactor, 0)}</strong>
+          </>
+        )}
+        {snap.debrisFactor < 1 && (
+          <>
+            <span className="bad">Collisions orbitales</span>
+            <strong className="bad">{pct(snap.debrisFactor, 0)}</strong>
           </>
         )}
         {snap.coolFactor < 1 && (

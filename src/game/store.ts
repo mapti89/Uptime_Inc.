@@ -6,6 +6,7 @@ import { tick } from './engine/tick';
 import * as A from './engine/actions';
 import { newGame } from './engine/state';
 import { simulateOffline, type OfflineReport } from './engine/offline';
+import { GALAXY_STARS } from './data/galaxy';
 import { clearStorage, encodeTransfer, loadFromStorage, saveToStorage } from './engine/save';
 
 export interface Toast {
@@ -23,6 +24,8 @@ interface Store {
   floaters: { id: number; text: string; x: number; y: number }[];
   /** Ère tout juste atteinte par un déménagement (affiche l'écran de transition). */
   eraTransition: number | null;
+  /** La galaxie vient d'être entièrement colonisée (écran de fin). */
+  victory: boolean;
 
   advance: (dt: number) => void;
   catchUp: (seconds: number) => void;
@@ -41,6 +44,7 @@ interface Store {
   dismissOffline: () => void;
   dismissToast: (id: number) => void;
   dismissEraTransition: () => void;
+  dismissVictory: () => void;
   save: () => void;
   /** Code de transfert compact de la partie en cours. */
   exportSave: () => Promise<string>;
@@ -104,11 +108,15 @@ export const useGame = create<Store>((set, get) => ({
   toasts: [],
   floaters: [],
   eraTransition: null,
+  victory: false,
 
-  advance: (dt) =>
+  advance: (dt) => {
+    const before = get().state.stars;
     mutate(get, set, (s) => {
       tick(s, dt);
-    }),
+    });
+    if (before < GALAXY_STARS && get().state.stars >= GALAXY_STARS) set({ victory: true });
+  },
 
   catchUp: (seconds) => {
     const s = structuredClone(get().state);
@@ -152,6 +160,7 @@ export const useGame = create<Store>((set, get) => ({
   dismissOffline: () => set({ offline: null }),
   dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
   dismissEraTransition: () => set({ eraTransition: null }),
+  dismissVictory: () => set({ victory: false }),
   save: () => {
     const s = structuredClone(get().state);
     saveToStorage(s);
@@ -172,7 +181,7 @@ export const useGame = create<Store>((set, get) => ({
 
 function formatShort(n: number): string {
   if (n < 1000) return n < 10 ? n.toFixed(1).replace('.', ',') : Math.floor(n).toString();
-  const units = ['', 'K', 'M', 'Md', 'T', 'Qa', 'Qi', 'Sx'];
+  const units = ['', 'K', 'M', 'Md', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
   const e = Math.min(units.length - 1, Math.floor(Math.log10(n) / 3));
   return (n / Math.pow(1000, e)).toFixed(1).replace('.', ',') + ' ' + units[e];
 }

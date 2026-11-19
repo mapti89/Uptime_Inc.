@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '../../game/store';
-import { PRESTIGE_MIN_ERA, PRESTIGE_SHOP, SHARE_BONUS } from '../../game/data/prestige';
+import { PRESTIGE_MIN_ERA, PRESTIGE_SHOP, SHARE_BONUS, SHARE_SOFTCAP, shareBonus } from '../../game/data/prestige';
 import { prestigeGain, prestigeShopCost } from '../../game/engine/actions';
 import { eraDef } from '../../game/data/eras';
 import { fmt, pct } from '../format';
@@ -19,10 +19,11 @@ export function PrestigePanel() {
         <p>
           Revendez l&apos;entreprise aux marchés et recommencez depuis le garage avec l&apos;expérience accumulée. Vous obtenez des{' '}
           <strong>actions</strong> selon l&apos;argent gagné pendant la partie. Chaque action détenue donne{' '}
-          <strong>+{pct(SHARE_BONUS, 0)}</strong> de revenus (les actions dépensées dans la boutique ne comptent plus).
+          <strong>+{pct(SHARE_BONUS, 0)}</strong> de revenus jusqu&apos;à {fmt(SHARE_SOFTCAP)} actions, puis le bonus
+          ralentit (il suit la racine carrée du nombre d&apos;actions). Les actions dépensées dans la boutique ne comptent plus.
         </p>
         <p>
-          Actions détenues : <strong>{fmt(p.shares)}</strong> (bonus +{pct(p.shares * SHARE_BONUS, 0)}) · Total historique : {fmt(p.totalShares)}
+          Actions détenues : <strong>{fmt(p.shares)}</strong> (bonus +{pct(shareBonus(p.shares), 0)}) · Total historique : {fmt(p.totalShares)}
         </p>
         {s.era < PRESTIGE_MIN_ERA ? (
           <p className="muted">

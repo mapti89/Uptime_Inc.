@@ -4,6 +4,7 @@ import { canMoveEra } from '../../game/engine/actions';
 import { money } from '../format';
 import { useEffect } from 'react';
 import { preloadEra } from './EraTransition';
+import { GALAXY_STARS } from '../../game/data/galaxy';
 
 export function EraPanel() {
   const s = useGame((g) => g.state);
@@ -20,7 +21,11 @@ export function EraPanel() {
           {era.icon} {era.name}
         </h3>
         <p className="muted">{era.desc}</p>
-        <p className="hint">Vous êtes au sommet. Préparez votre introduction en bourse 🔔</p>
+        <p className="hint">
+          {s.stars >= GALAXY_STARS
+            ? 'La galaxie entière vous appartient. Uptime galactique : 100 % 🌌'
+            : 'Dernière étape : coloniser la Voie lactée tout entière 🌌'}
+        </p>
       </div>
     );
   }
@@ -43,7 +48,7 @@ export function EraPanel() {
         </span>
       </div>
       <button className="btn primary wide" disabled={!can} onClick={moveEra}>
-        🚚 Déménager ({money(next.moveCost)})
+        {next.id >= 7 ? '🚀 Lancer l’expansion' : '🚚 Déménager'} ({money(next.moveCost)})
       </button>
     </div>
   );

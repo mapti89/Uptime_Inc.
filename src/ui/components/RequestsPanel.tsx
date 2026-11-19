@@ -23,6 +23,18 @@ export function RequestsPanel() {
               <div className="req-head">
                 <span className="req-name">
                   {t.icon} {t.name}
+                  {era >= 10 && (
+                    <span
+                      className={`latency-tag ${t.tolerant ? 'tolerant' : 'realtime'}`}
+                      title={
+                        t.tolerant
+                          ? 'Tolère la latence : peut être servie par le matériel lointain (Mars et au-delà).'
+                          : 'Temps réel : seul le matériel proche (Terre, orbite, Lune) peut la servir.'
+                      }
+                    >
+                      {t.tolerant ? '🐢' : '⚡'}
+                    </span>
+                  )}
                 </span>
                 <span className="req-income">{fmt(sv * price)} $/s</span>
               </div>

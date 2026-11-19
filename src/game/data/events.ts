@@ -54,6 +54,37 @@ export const EVENTS: EventDef[] = [
     id: 'solarflare', name: 'Éruption solaire', icon: '🌞', era: 5, weight: 3, duration: 60, good: false,
     desc: 'Des bits flippent partout : 10 % de dégâts.',
   },
+  // --- Conquête spatiale ---
+  {
+    id: 'launchfail', name: 'Échec au lancement', icon: '💥', era: 7, weight: 4, duration: 0, good: false,
+    desc: 'Le lanceur explose en vol avec une partie de votre matériel : 8 % de dégâts.',
+  },
+  {
+    id: 'launchwindow', name: 'Fenêtre de tir parfaite', icon: '🌤️', era: 7, weight: 3, duration: 0, good: true,
+    desc: 'Météo idéale, tous les lancements partent à l’heure : +120 s de revenus.',
+  },
+  {
+    id: 'kessler', name: 'Collisions en cascade', icon: '💫', era: 8, weight: 3, duration: 0, good: false,
+    desc: 'Un satellite mort en percute un autre, et ainsi de suite : 15 % de dégâts. Plus fréquent quand les débris débordent.',
+  },
+  {
+    id: 'moonquake', name: 'Séisme lunaire', icon: '🌑', era: 9, weight: 3, duration: 0, good: false,
+    desc: 'La Lune tremble aussi : 6 % de dégâts dans vos installations souterraines.',
+  },
+  {
+    id: 'conjunction', name: 'Conjonction solaire', icon: '🌞', era: 10, weight: 4, duration: 90, good: false,
+    desc: 'Le Soleil s’interpose entre la Terre et Mars : bande passante −50 %.',
+    fixCostSeconds: 30,
+  },
+  {
+    id: 'xenosignal', name: 'Signal extraterrestre', icon: '📻', era: 11, weight: 3, duration: 60, good: true,
+    desc: 'Un message venu d’ailleurs fait exploser l’intérêt pour vos services : demande ×3 !',
+  },
+  {
+    id: 'supernova', name: 'Supernova proche', icon: '🎆', era: 12, weight: 3, duration: 60, good: false,
+    desc: 'Une étoile voisine explose : 10 % de dégâts et refroidissement −30 %.',
+    fixCostSeconds: 40,
+  },
 ];
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

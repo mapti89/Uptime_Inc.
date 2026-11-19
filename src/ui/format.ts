@@ -38,8 +38,10 @@ function unit(n: number, units: string[], base = 1000): string {
   return `${trim(v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2))} ${units[i]}`;
 }
 
-export const watts = (w: number) => unit(w, ['W', 'kW', 'MW', 'GW', 'TW', 'PW']);
-export const bandwidth = (mbps: number) => unit(mbps, ['Mb/s', 'Gb/s', 'Tb/s', 'Pb/s', 'Eb/s']);
+export const watts = (w: number) => unit(w, ['W', 'kW', 'MW', 'GW', 'TW', 'PW', 'EW', 'ZW', 'YW']);
+/** Masse en tonnes. */
+export const mass = (t: number) => unit(t, ['t', 'kt', 'Mt', 'Gt', 'Tt', 'Pt']);
+export const bandwidth = (mbps: number) => unit(mbps, ['Mb/s', 'Gb/s', 'Tb/s', 'Pb/s', 'Eb/s', 'Zb/s', 'Yb/s']);
 export const storage = (to: number) => unit(to * 1000, ['Go', 'To', 'Po', 'Eo', 'Zo', 'Yo']);
 export const ram = (go: number) => unit(go, ['Go', 'To', 'Po', 'Eo', 'Zo']);
 export const pct = (x: number, d = 1) => `${trim((x * 100).toFixed(d))} %`;

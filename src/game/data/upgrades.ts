@@ -24,11 +24,14 @@ const TIER_NAMES: Record<string, string[]> = {
   sales: ['Plaquette', 'Témoignages clients', 'Programme de parrainage', 'Account managers', 'Marque forte', 'Lobbying', 'Hégémonie'],
 };
 
+/** Électricité et refroidissement n'ont pas de paliers par quantité (voir USAGE_TIERS). */
+const COUNT_TIER_CATS = new Set(['servers', 'storage', 'network', 'sales']);
+
 function tierUpgrades(): UpgradeDef[] {
   const list: UpgradeDef[] = [];
   for (const b of BUILDINGS) {
     const names = TIER_NAMES[b.cat];
-    if (!names) continue;
+    if (!names || !COUNT_TIER_CATS.has(b.cat)) continue;
     TIERS.forEach((t, i) => {
       list.push({
         id: `${b.id}_t${i + 1}`,
@@ -43,6 +46,63 @@ function tierUpgrades(): UpgradeDef[] {
     });
   }
   return list;
+}
+
+// ---------------------------------------------------------------------------
+// Upgrades d'usage : électricité et refroidissement se débloquent selon le
+// record de consommation / de chaleur évacuée de la partie, pas selon le
+// nombre d'équipements possédés. On gagne en optimisant, pas en empilant.
+// ---------------------------------------------------------------------------
+
+const USAGE_TIERS: { value: number; era: number; cost: number }[] = [
+  { value: 300, era: 1, cost: 2_000 },
+  { value: 5_000, era: 2, cost: 100_000 },
+  { value: 30_000, era: 3, cost: 10_000_000 },
+  { value: 150_000, era: 4, cost: 1e9 },
+  { value: 1_000_000, era: 5, cost: 1e11 },
+  { value: 5_000_000, era: 6, cost: 1e13 },
+  { value: 50_000_000, era: 6, cost: 1e14 },
+];
+
+function usageUpgrades(): UpgradeDef[] {
+  const list: UpgradeDef[] = [];
+  USAGE_TIERS.forEach((t, i) => {
+    const suffix = TIERS[i].suffix;
+    list.push({
+      id: `power_u${i + 1}`,
+      name: `${TIER_NAMES.power[i]} ${suffix}`,
+      desc: 'Consommation des serveurs −5 %, prix de l’électricité −5 %.',
+      icon: '⚡',
+      cost: t.cost,
+      era: t.era,
+      req: { usage: 'power', value: t.value },
+      effects: [{ kind: 'wattsMult', mult: 0.95 }, { kind: 'elecPriceMult', mult: 0.95 }],
+    });
+    list.push({
+      id: `cooling_u${i + 1}`,
+      name: `${TIER_NAMES.cooling[i]} ${suffix}`,
+      desc: 'Surcoût du refroidissement −10 %, refroidissement ×1,1.',
+      icon: '❄️',
+      cost: t.cost,
+      era: t.era,
+      req: { usage: 'heat', value: t.value },
+      effects: [{ kind: 'pueMult', mult: 0.9 }, { kind: 'statMult', stat: 'cooling', mult: 1.1 }],
+    });
+  });
+  return list;
+}
+
+/**
+ * Anciens paliers par quantité de l'électricité et du refroidissement
+ * (supprimés en v2) : coût d'origine, pour rembourser les sauvegardes.
+ */
+export function legacyTierCost(id: string): number | null {
+  const m = /^(.+)_t(\d)$/.exec(id);
+  if (!m) return null;
+  const b = BUILDINGS.find((x) => x.id === m[1]);
+  const t = TIERS[Number(m[2]) - 1];
+  if (!b || !t || (b.cat !== 'power' && b.cat !== 'cooling')) return null;
+  return b.baseCost * t.costMult;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,11 +157,27 @@ const NAMED: UpgradeDef[] = [
   { id: 'llmserving', name: 'Serving LLM optimisé', icon: '💬', era: 5, cost: 300_000_000_000, desc: 'Inférence IA ×1,5.', effects: [{ kind: 'priceMult', mult: 1.5, reqType: 'inference' }] },
   { id: 'frontier', name: 'Contrats modèles frontière', icon: '🏔️', era: 6, cost: 2e13, desc: 'Entraînement IA ×1,5.', effects: [{ kind: 'priceMult', mult: 1.5, reqType: 'training' }] },
   { id: 'monopoly', name: 'Position dominante', icon: '👑', era: 6, cost: 1e15, desc: 'Prix ×2.', effects: [{ kind: 'priceMult', mult: 2 }] },
+  // --- Conquête spatiale ---
+  { id: 'fairing', name: 'Coiffes récupérées', icon: '🪂', era: 7, cost: 5e15, desc: 'Capacité d’emport ×1,5.', effects: [{ kind: 'statMult', stat: 'lift', mult: 1.5 }] },
+  { id: 'spacesla', name: 'SLA orbital', icon: '🛰️', era: 7, cost: 2e16, desc: 'Prix ×1,5.', effects: [{ kind: 'priceMult', mult: 1.5 }] },
+  { id: 'eocontracts', name: 'Contrats d’observation', icon: '🗺️', era: 7, cost: 1e16, desc: 'Imagerie satellite ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'earthobs' }] },
+  { id: 'deorbit', name: 'Désorbitation automatique', icon: '⬇️', era: 8, cost: 5e18, desc: 'Nettoyage des débris ×2.', effects: [{ kind: 'statMult', stat: 'cleanup', mult: 2 }] },
+  { id: 'rideshare', name: 'Lancements groupés', icon: '🚌', era: 8, cost: 2e19, desc: 'Capacité d’emport ×2.', effects: [{ kind: 'statMult', stat: 'lift', mult: 2 }] },
+  { id: 'meshnet', name: 'Maillage inter-satellites', icon: '🕸️', era: 8, cost: 1e19, desc: 'Internet orbital ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'orbitnet' }] },
+  { id: 'lunarfactory', name: 'Usine lunaire', icon: '🏭', era: 9, cost: 5e21, desc: 'Programme spatial −25 %, emport ×1,5.', effects: [{ kind: 'costMult', cat: 'orbit', mult: 0.75 }, { kind: 'statMult', stat: 'lift', mult: 1.5 }] },
+  { id: 'memorialvault', name: 'Mémoire de l’humanité', icon: '📚', era: 9, cost: 1e22, desc: 'Archive de l’humanité ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'archive' }] },
+  { id: 'marsvisa', name: 'Visa martien', icon: '🛂', era: 10, cost: 5e24, desc: 'Prix ×1,5.', effects: [{ kind: 'priceMult', mult: 1.5 }] },
+  { id: 'gridcompute', name: 'Grille de calcul solaire', icon: '🧮', era: 10, cost: 1e25, desc: 'Simulation scientifique ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'scisim' }] },
+  { id: 'probeai', name: 'IA de navigation des sondes', icon: '🧭', era: 11, cost: 5e27, desc: 'Colonisation ×2.', effects: [{ kind: 'statMult', stat: 'replication', mult: 2 }] },
+  { id: 'consentprotocol', name: 'Protocole de consentement', icon: '🪪', era: 11, cost: 1e28, desc: 'Téléversement de conscience ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'mindupload' }] },
+  { id: 'galacticsla', name: 'SLA galactique', icon: '🌠', era: 12, cost: 5e30, desc: 'Prix ×2.', effects: [{ kind: 'priceMult', mult: 2 }] },
+  { id: 'cosmicrender', name: 'Rendu cosmique', icon: '🎇', era: 12, cost: 1e31, desc: 'Simulation d’univers ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'universe' }] },
 ];
 
 export const UPGRADES: UpgradeDef[] = [
   ...NAMED.map((u) => ({ ...u, cost: u.cost * ERA_COST_SCALE[u.era - 1] })),
   ...tierUpgrades(),
+  ...usageUpgrades().map((u) => ({ ...u, cost: u.cost * ERA_COST_SCALE[u.era - 1] })),
 ];
 
 export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(

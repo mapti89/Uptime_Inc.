@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../game/store';
 import { BUILDINGS, CATEGORIES } from '../../game/data/buildings';
-import { quoteBuilding } from '../../game/engine/actions';
+import { inTransit, quoteBuilding } from '../../game/engine/actions';
 import { effectiveProvides } from '../../game/engine/modifiers';
 import type { BuildingDef, BuyAmount, Provides } from '../../game/types';
 import { GameIcon } from './GameIcon';
 import { useUi } from '../uiStore';
-import { bandwidth, fmt, money, ram, storage, watts } from '../format';
+import { bandwidth, duration, fmt, mass, money, ram, storage, watts } from '../format';
 
 const AMOUNTS: BuyAmount[] = [1, 10, 100, 'max'];
 
@@ -20,6 +20,9 @@ function describeProvides(p: Provides, mult: number): string[] {
   if (p.power) out.push(`+${watts(p.power * mult)} dispo`);
   if (p.cooling) out.push(`${watts(p.cooling * mult)} évacués`);
   if (p.space) out.push(`+${fmt(p.space)} U`);
+  if (p.lift) out.push(`+${mass(p.lift * mult)} d’emport`);
+  if (p.cleanup) out.push(`${mass(p.cleanup * mult)} de débris nettoyés`);
+  if (p.replication) out.push(`colonisation +${(p.replication * mult * 100).toFixed(2)} %/s`);
   if (p.traffic) out.push(`+${fmt(p.traffic * mult)} req/s de demande`);
   if (p.rd) out.push(`+${fmt(p.rd)} R&D/s`);
   if (p.autoClick) out.push(`${fmt(p.autoClick)} clic/s`);
@@ -34,6 +37,7 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
   const mods = useGame((g) => g.mods);
   const buy = useGame((g) => g.buy);
   const owned = s.owned[b.id] ?? 0;
+  const pending = b.travel ? inTransit(s, b.id) : 0;
   const q = quoteBuilding(s, b, s.settings.buyAmount, mods);
   const mult = (mods.building[b.id] ?? 1) * (mods.cat[b.cat] ?? 1);
   const disabled = !!q.blocked;
@@ -47,7 +51,7 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
     window.setTimeout(() => setPops((p) => p.filter((o) => o.id !== id)), 800);
   };
   const reason =
-    q.blocked === 'space' ? 'Plus de place !' : q.blocked === 'max' ? 'Maximum atteint' : q.blocked === 'era' ? 'Ère suivante' : '';
+    q.blocked === 'space' ? 'Plus de place !' : q.blocked === 'lift' ? 'Emport insuffisant !' : q.blocked === 'max' ? 'Maximum atteint' : q.blocked === 'era' ? 'Ère suivante' : '';
   return (
     <button
       className={`shop-item ${disabled ? 'disabled' : ''} ${q.blocked === 'money' ? 'poor' : ''} ${focus ? 'focus' : ''}`} onClick={onBuy} disabled={disabled}>
@@ -67,6 +71,10 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
           ))}
           {b.watts > 0 && <span className="stat-pill power">{watts(b.watts * mods.watts)}</span>}
           {b.slots > 0 && <span className="stat-pill space">{b.slots} U</span>}
+          {b.mass !== undefined && <span className="stat-pill space">🚀 {mass(b.mass * mods.mass)}</span>}
+          {b.debris !== undefined && <span className="stat-pill">🛰️ {mass(b.debris * mods.mass)} de débris</span>}
+          {b.remote && <span className="stat-pill remote" title="Trop loin pour les requêtes temps réel : ne sert que les requêtes tolérantes à la latence.">🐢 lointain</span>}
+          {b.travel !== undefined && <span className="stat-pill">⏳ voyage {duration(b.travel)}</span>}
           {b.overhead !== undefined && <span className="stat-pill">surcoût PUE {b.overhead}</span>}
         </span>
       </span>
@@ -74,6 +82,7 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
         <span key={owned} className={`shop-owned ${pops.length ? 'bump' : ''}`}>
           {owned}
         </span>
+        {pending > 0 && <span className="shop-transit" title="En route">+{pending} ⏳</span>}
         {pops.map((p) => (
           <span key={p.id} className="buy-pop">
             +{p.n}
@@ -121,7 +130,7 @@ export function Shop() {
     <div className="shop" ref={root}>
       <div className="shop-toolbar">
         <div className="subtabs">
-          {CATEGORIES.map((c) => (
+          {CATEGORIES.filter((c) => !c.era || c.era <= era + 1).map((c) => (
             <button key={c.id} className={`subtab ${cat === c.id ? 'active' : ''}`} onClick={() => setCat(c.id)}>
               <GameIcon set="categories" id={c.id} emoji={c.icon} size={20} /> {c.name}
             </button>

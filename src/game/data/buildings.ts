@@ -85,11 +85,79 @@ const SERVERS: BuildingDef[] = [
     baseCost: 3e12, growth: 1.2, slots: 500, watts: 25_000_000,
     provides: { cpu: 2_500_000, ram: 12_500_000, gpu: 1_000, storage: 25_000 },
   },
+
+  // --- Conquête spatiale : le matériel est lancé (masse) au lieu d'être racké ---
   {
-    id: 'orbital', cat: 'servers', name: 'Datacenter orbital', icon: '🛰️', era: 6,
-    desc: 'En orbite basse : énergie solaire gratuite et refroidissement par le vide.',
-    baseCost: 3e13, growth: 1.2, slots: 0, watts: 0,
-    provides: { cpu: 12_500_000, ram: 62_500_000, gpu: 5_000, storage: 125_000 },
+    id: 'orbital', cat: 'servers', name: 'Datacenter orbital', icon: '🛰️', era: 7,
+    desc: 'En orbite basse : soleil permanent, mais la chaleur ne part que par rayonnement.',
+    baseCost: 3e13, growth: 1.2, slots: 0, watts: 1e8, mass: 20, debris: 20,
+    provides: { cpu: 1.25e07, ram: 6.25e07, gpu: 5_000, storage: 125_000 },
+  },
+  {
+    id: 'orbmodule', cat: 'servers', name: 'Module de calcul orbital', icon: '🧑‍🚀', era: 7,
+    desc: 'Un module pressurisé amarré à votre station, plein de baies durcies aux radiations.',
+    baseCost: 3e14, growth: 1.2, slots: 0, watts: 4e8, mass: 100, debris: 60,
+    provides: { cpu: 8.75e07, ram: 4.375e08, gpu: 35_000, storage: 875_000 },
+  },
+  {
+    id: 'swarm', cat: 'servers', name: 'Essaim de micro-satellites', icon: '🐝', era: 8,
+    desc: 'Des milliers de satellites jetables qui calculent en essaim. Gare aux débris.',
+    baseCost: 3e15, growth: 1.2, slots: 0, watts: 1.6e9, mass: 500, debris: 1_000,
+    provides: { cpu: 6.125e08, ram: 3.062e09, gpu: 245_000, storage: 6.125e06 },
+  },
+  {
+    id: 'geostation', cat: 'servers', name: 'Station géostationnaire', icon: '🛸', era: 8,
+    desc: 'À 36 000 km, immobile au-dessus de l’équateur. Robuste et durable.',
+    baseCost: 3e16, growth: 1.2, slots: 0, watts: 6.4e9, mass: 2_500, debris: 500,
+    provides: { cpu: 4.288e09, ram: 2.144e10, gpu: 1.715e06, storage: 4.288e07 },
+  },
+  {
+    id: 'lavatube', cat: 'servers', name: 'Datacenter en tube de lave', icon: '🌋', era: 9,
+    desc: 'Enfoui sous la Lune, à l’abri des radiations et des micrométéorites.',
+    baseCost: 3e17, growth: 1.2, slots: 0, watts: 2.56e10, mass: 12_500,
+    provides: { cpu: 3.001e10, ram: 1.501e11, gpu: 1.2e07, storage: 3.001e08 },
+  },
+  {
+    id: 'l2hub', cat: 'servers', name: 'Hub au point L2', icon: '🔭', era: 9,
+    desc: 'Au point de Lagrange L2, à l’ombre de la Terre : stable, froid et silencieux.',
+    baseCost: 3e18, growth: 1.2, slots: 0, watts: 1e11, mass: 62_500,
+    provides: { cpu: 2.101e11, ram: 1.05e12, gpu: 8.404e07, storage: 2.101e09 },
+  },
+  {
+    id: 'marsdc', cat: 'servers', name: 'Datacenter martien', icon: '🔴', era: 10,
+    desc: 'Froid naturel, poussière partout et 4 à 24 minutes de latence avec la Terre.',
+    baseCost: 3e19, growth: 1.2, slots: 0, watts: 4e11, mass: 312_500, remote: true,
+    provides: { cpu: 1.471e12, ram: 7.353e12, gpu: 5.882e08, storage: 1.471e10 },
+  },
+  {
+    id: 'asteroidcore', cat: 'servers', name: 'Astéroïde-ordinateur', icon: '☄️', era: 10,
+    desc: 'Un astéroïde métallique entièrement creusé et gravé en circuits.',
+    baseCost: 3e20, growth: 1.2, slots: 0, watts: 1.6e12, mass: 1.5625e6, remote: true,
+    provides: { cpu: 1.029e13, ram: 5.147e13, gpu: 4.118e09, storage: 1.029e11 },
+  },
+  {
+    id: 'stellarnode', cat: 'servers', name: 'Nœud stellaire', icon: '⭐', era: 11,
+    desc: 'Un datacenter en orbite d’une autre étoile. Il faut quelques minutes pour l’atteindre.',
+    baseCost: 3e21, growth: 1.2, slots: 0, watts: 6.4e12, mass: 7.8125e6, remote: true, travel: 180,
+    provides: { cpu: 7.206e13, ram: 3.603e14, gpu: 2.882e10, storage: 7.206e11 },
+  },
+  {
+    id: 'neutroncore', cat: 'servers', name: 'Calculateur à étoile à neutrons', icon: '💫', era: 11,
+    desc: 'De la matière si dense qu’une cuillère pèse un milliard de tonnes. Elle calcule vite.',
+    baseCost: 3e22, growth: 1.2, slots: 0, watts: 2.56e13, mass: 3.90625e7, remote: true, travel: 360,
+    provides: { cpu: 5.044e14, ram: 2.522e15, gpu: 2.018e11, storage: 5.044e12 },
+  },
+  {
+    id: 'matrioshka', cat: 'servers', name: 'Cerveau Matriochka', icon: '🪆', era: 12,
+    desc: 'Des sphères de Dyson emboîtées : chaque couche calcule avec la chaleur de la précédente.',
+    baseCost: 3e23, growth: 1.2, slots: 0, watts: 1.024e14, mass: 1.953125e8, remote: true, travel: 600,
+    provides: { cpu: 3.531e15, ram: 1.765e16, gpu: 1.412e12, storage: 3.531e13 },
+  },
+  {
+    id: 'blackholecpu', cat: 'servers', name: 'Ordinateur à trou noir', icon: '🕳️', era: 12,
+    desc: 'La limite ultime du calcul : chaque bit frôle l’horizon des événements.',
+    baseCost: 3e24, growth: 1.2, slots: 0, watts: 4.096e14, mass: 9.765625e8, remote: true, travel: 900,
+    provides: { cpu: 2.472e16, ram: 1.236e17, gpu: 9.887e12, storage: 2.472e14 },
   },
 ];
 
@@ -135,6 +203,42 @@ const STORAGE: BuildingDef[] = [
     desc: 'Un exaoctet dans un tube à essai.',
     baseCost: 8e11, growth: 1.2, slots: 10, watts: 50_000,
     provides: { storage: 80_000_000 },
+  },
+  {
+    id: 'leoarchive', cat: 'storage', name: 'Archive en orbite basse', icon: '🧊', era: 7,
+    desc: 'Des baies froides en orbite, hors de portée des catastrophes terrestres.',
+    baseCost: 8e13, growth: 1.2, slots: 0, watts: 2e5, mass: 15, debris: 15,
+    provides: { storage: 3.2e9 },
+  },
+  {
+    id: 'crystal5d', cat: 'storage', name: 'Mémoire cristalline 5D', icon: '💎', era: 8,
+    desc: 'Gravée au laser femtoseconde dans du quartz : des milliards d’années de rétention.',
+    baseCost: 8e15, growth: 1.2, slots: 0, watts: 8e5, mass: 60, debris: 30,
+    provides: { storage: 1.28e11 },
+  },
+  {
+    id: 'lunarvault', cat: 'storage', name: 'Coffre-fort lunaire', icon: '🏛️', era: 9,
+    desc: 'Une sauvegarde de toute l’humanité, au fond d’un cratère polaire.',
+    baseCost: 8e17, growth: 1.2, slots: 0, watts: 3.2e6, mass: 250,
+    provides: { storage: 5.12e12 },
+  },
+  {
+    id: 'titancryo', cat: 'storage', name: 'Stockage cryogénique sur Titan', icon: '🧪', era: 10,
+    desc: 'À −180 °C dans les lacs de méthane. Lointain, mais parfait pour les archives.',
+    baseCost: 8e19, growth: 1.2, slots: 0, watts: 1.28e7, mass: 1_000, remote: true,
+    provides: { storage: 2.048e14 },
+  },
+  {
+    id: 'degenerate', cat: 'storage', name: 'Mémoire en matière dégénérée', icon: '⚫', era: 11,
+    desc: 'Les bits sont codés dans les états quantiques d’une naine blanche.',
+    baseCost: 8e21, growth: 1.2, slots: 0, watts: 5.12e7, mass: 4_000, remote: true, travel: 240,
+    provides: { storage: 8.192e15 },
+  },
+  {
+    id: 'holohorizon', cat: 'storage', name: 'Stockage holographique d’horizon', icon: '🌀', era: 12,
+    desc: 'Toute l’information d’un volume, écrite sur la surface d’un trou noir.',
+    baseCost: 8e23, growth: 1.2, slots: 0, watts: 2.048e8, mass: 16_000, remote: true, travel: 600,
+    provides: { storage: 3.2768e17 },
   },
 ];
 
@@ -205,6 +309,42 @@ const NETWORK: BuildingDef[] = [
     baseCost: 5e13, growth: 1.2, slots: 0, watts: 0,
     provides: { bw: 2_000_000_000 },
   },
+  {
+    id: 'kaground', cat: 'network', name: 'Station sol en bande Ka', icon: '📡', era: 7,
+    desc: 'Des paraboles géantes qui descendent les données de vos satellites.',
+    baseCost: 5e13, growth: 1.2, slots: 0, watts: 400_000,
+    provides: { bw: 2e9 },
+  },
+  {
+    id: 'optsat', cat: 'network', name: 'Relais optique géostationnaire', icon: '🔦', era: 8,
+    desc: 'Des lasers relient vos constellations à la Terre sans aucune fibre.',
+    baseCost: 5e15, growth: 1.2, slots: 0, watts: 1.6e6, mass: 40, debris: 40,
+    provides: { bw: 5e10 },
+  },
+  {
+    id: 'lunarrelay', cat: 'network', name: 'Relais laser lunaire', icon: '🌙', era: 9,
+    desc: 'Un réseau de relais en orbite lunaire, connecté en permanence à la Terre.',
+    baseCost: 5e17, growth: 1.2, slots: 0, watts: 6.4e6, mass: 150,
+    provides: { bw: 1.25e12 },
+  },
+  {
+    id: 'deepnet', cat: 'network', name: 'Réseau de l’espace lointain', icon: '📶', era: 10,
+    desc: 'Des antennes de 70 m et des relais dans tout le système solaire.',
+    baseCost: 5e19, growth: 1.2, slots: 0, watts: 2.56e7, mass: 600,
+    provides: { bw: 3.125e13 },
+  },
+  {
+    id: 'wormhole', cat: 'network', name: 'Relais à trou de ver', icon: '🍩', era: 11,
+    desc: 'Un raccourci dans l’espace-temps : la latence interplanétaire disparaît.',
+    baseCost: 5e21, growth: 1.2, slots: 0, watts: 1e8, mass: 2_500, travel: 300, flags: ['wormhole'],
+    provides: { bw: 7.8125e14 },
+  },
+  {
+    id: 'galacticnet', cat: 'network', name: 'Réseau galactique', icon: '🕸️', era: 12,
+    desc: 'Un maillage de trous de ver qui relie les bras de la galaxie.',
+    baseCost: 5e23, growth: 1.2, slots: 0, watts: 4e8, mass: 10_000, travel: 600,
+    provides: { bw: 1.953125e16 },
+  },
 ];
 
 const POWER: BuildingDef[] = [
@@ -274,6 +414,42 @@ const POWER: BuildingDef[] = [
     baseCost: 2e14, growth: 1.2, slots: 0, watts: 0,
     provides: { power: 5_000_000_000 },
   },
+  {
+    id: 'orbitalsolar', cat: 'power', name: 'Station solaire orbitale', icon: '🛰️', era: 7,
+    desc: 'Des kilomètres de panneaux en plein soleil, sans nuit ni nuages.',
+    baseCost: 2e16, growth: 1.2, slots: 0, watts: 0,
+    provides: { power: 8e10 },
+  },
+  {
+    id: 'sbsp', cat: 'power', name: 'Ferme solaire géostationnaire', icon: '📶', era: 8,
+    desc: 'L’énergie est renvoyée vers vos installations par faisceau micro-ondes.',
+    baseCost: 2e18, growth: 1.2, slots: 0, watts: 0,
+    provides: { power: 1.28e12 },
+  },
+  {
+    id: 'he3', cat: 'power', name: 'Fusion à l’hélium-3 lunaire', icon: '⚛️', era: 9,
+    desc: 'Le régolithe lunaire regorge d’hélium-3 : la fusion propre devient rentable.',
+    baseCost: 2e20, growth: 1.2, slots: 0, watts: 0,
+    provides: { power: 2.048e13 },
+  },
+  {
+    id: 'mercuryring', cat: 'power', name: 'Anneau solaire de Mercure', icon: '💍', era: 10,
+    desc: 'Une ceinture de panneaux autour de la planète la plus proche du Soleil.',
+    baseCost: 2e22, growth: 1.2, slots: 0, watts: 0,
+    provides: { power: 3.2768e14 },
+  },
+  {
+    id: 'dysonswarm', cat: 'power', name: 'Essaim de Dyson', icon: '🌞', era: 11,
+    desc: 'Des milliards de collecteurs en orbite d’une étoile captent une partie de sa lumière.',
+    baseCost: 2e24, growth: 1.2, slots: 0, watts: 0, travel: 300,
+    provides: { power: 5.24288e15 },
+  },
+  {
+    id: 'dysonsphere', cat: 'power', name: 'Sphère de Dyson', icon: '🟠', era: 12,
+    desc: 'Une étoile entièrement enveloppée : toute son énergie vous appartient.',
+    baseCost: 2e26, growth: 1.2, slots: 0, watts: 0, travel: 900,
+    provides: { power: 8.388608e16 },
+  },
 ];
 
 const COOLING: BuildingDef[] = [
@@ -324,6 +500,42 @@ const COOLING: BuildingDef[] = [
     desc: 'Pompage d’eau à 4 °C depuis les grands fonds.',
     baseCost: 8e13, growth: 1.18, slots: 0, watts: 0,
     provides: { cooling: 2_000_000_000 }, overhead: 0.02,
+  },
+  {
+    id: 'heatpipes', cat: 'cooling', name: 'Radiateurs orbitaux', icon: '🪭', era: 7,
+    desc: 'Dans le vide, la chaleur ne part que par rayonnement : il faut d’immenses ailettes.',
+    baseCost: 8e15, growth: 1.18, slots: 0, watts: 0,
+    provides: { cooling: 3.2e10 }, overhead: 0.06,
+  },
+  {
+    id: 'droplet', cat: 'cooling', name: 'Radiateurs à gouttelettes', icon: '💦', era: 8,
+    desc: 'Un rideau de gouttelettes d’huile rayonne la chaleur, puis est récupéré.',
+    baseCost: 8e17, growth: 1.18, slots: 0, watts: 0,
+    provides: { cooling: 5.12e11 }, overhead: 0.04,
+  },
+  {
+    id: 'polarcrater', cat: 'cooling', name: 'Cratère d’ombre éternelle', icon: '🕳️', era: 9,
+    desc: 'Au pôle sud lunaire, des cratères à −240 °C qui n’ont jamais vu le Soleil.',
+    baseCost: 8e19, growth: 1.18, slots: 0, watts: 0,
+    provides: { cooling: 8.192e12 }, overhead: 0.02,
+  },
+  {
+    id: 'europa', cat: 'cooling', name: 'Océan d’Europe', icon: '🧊', era: 10,
+    desc: 'Un océan entier sous la glace d’une lune de Jupiter, pour dissiper vos calories.',
+    baseCost: 8e21, growth: 1.18, slots: 0, watts: 0,
+    provides: { cooling: 1.31072e14 }, overhead: 0.015,
+  },
+  {
+    id: 'oortcloud', cat: 'cooling', name: 'Nuage de Oort', icon: '☁️', era: 11,
+    desc: 'Aux confins du système solaire, à quelques kelvins du zéro absolu.',
+    baseCost: 8e23, growth: 1.18, slots: 0, watts: 0, travel: 300,
+    provides: { cooling: 2.097152e15 }, overhead: 0.01,
+  },
+  {
+    id: 'cmb', cat: 'cooling', name: 'Rayonnement vers le fond cosmique', icon: '🌌', era: 12,
+    desc: 'Vos radiateurs visent l’univers lui-même, à 2,7 K.',
+    baseCost: 8e25, growth: 1.18, slots: 0, watts: 0, travel: 600,
+    provides: { cooling: 3.3554432e16 }, overhead: 0.005,
   },
 ];
 
@@ -439,6 +651,118 @@ const SALES: BuildingDef[] = [
     baseCost: 3.5e13, growth: 1.17, slots: 0, watts: 0,
     provides: { traffic: 400_000_000 },
   },
+  {
+    id: 'spacetourism', cat: 'sales', name: 'Tourisme spatial', icon: '👨‍🚀', era: 7,
+    desc: 'Les touristes en orbite veulent publier leurs photos tout de suite.',
+    baseCost: 3.5e15, growth: 1.17, slots: 0, watts: 0,
+    provides: { traffic: 1e10 },
+  },
+  {
+    id: 'satinternet', cat: 'sales', name: 'Internet orbital universel', icon: '📡', era: 8,
+    desc: 'Chaque point du globe est connecté, des déserts aux océans.',
+    baseCost: 3.5e17, growth: 1.17, slots: 0, watts: 0,
+    provides: { traffic: 2.5e11 },
+  },
+  {
+    id: 'lunareco', cat: 'sales', name: 'Économie lunaire', icon: '🌕', era: 9,
+    desc: 'Mines, hôtels et usines lunaires : tout ce petit monde a besoin de cloud.',
+    baseCost: 3.5e19, growth: 1.17, slots: 0, watts: 0,
+    provides: { traffic: 6.25e12 },
+  },
+  {
+    id: 'marscolonies', cat: 'sales', name: 'Colonies martiennes', icon: '🏜️', era: 10,
+    desc: 'Un million de colons, et autant d’abonnements.',
+    baseCost: 3.5e21, growth: 1.17, slots: 0, watts: 0,
+    provides: { traffic: 1.5625e14 },
+  },
+  {
+    id: 'firstcontact', cat: 'sales', name: 'Premier contact', icon: '👽', era: 11,
+    desc: 'Une civilisation voisine découvre le cloud. Elle a beaucoup de données.',
+    baseCost: 3.5e23, growth: 1.17, slots: 0, watts: 0,
+    provides: { traffic: 3.90625e15 },
+  },
+  {
+    id: 'galacticmarket', cat: 'sales', name: 'Marché galactique', icon: '🪐', era: 12,
+    desc: 'Des milliers d’espèces, une seule plateforme d’hébergement.',
+    baseCost: 3.5e25, growth: 1.17, slots: 0, watts: 0,
+    provides: { traffic: 9.765625e16 },
+  },
+];
+
+// Programme spatial : lanceurs (capacité d'emport), nettoyage orbital, sondes.
+const ORBIT: BuildingDef[] = [
+  {
+    id: 'launchpad', cat: 'orbit', name: 'Pas de tir', icon: '🗼', era: 7,
+    desc: 'Votre propre pas de tir, et une fusée qui part toutes les semaines.',
+    baseCost: 1e13, growth: 1.3, slots: 0, watts: 0,
+    provides: { lift: 100 },
+  },
+  {
+    id: 'reusable', cat: 'orbit', name: 'Lanceur réutilisable', icon: '🚀', era: 7,
+    desc: 'Le premier étage revient se poser tout seul. Le coût du kilo s’effondre.',
+    baseCost: 2e14, growth: 1.3, slots: 0, watts: 0,
+    provides: { lift: 1_500 },
+  },
+  {
+    id: 'superheavy', cat: 'orbit', name: 'Lanceur super-lourd', icon: '🏗️', era: 8,
+    desc: '150 tonnes en orbite à chaque vol, ravitaillement en orbite compris.',
+    baseCost: 4e15, growth: 1.3, slots: 0, watts: 0,
+    provides: { lift: 25_000 },
+  },
+  {
+    id: 'debristug', cat: 'orbit', name: 'Remorqueur de débris', icon: '🧹', era: 8,
+    desc: 'Il capture les satellites morts et les désorbite proprement.',
+    baseCost: 2e15, growth: 1.25, slots: 0, watts: 0,
+    provides: { cleanup: 3_000 },
+  },
+  {
+    id: 'massdriver', cat: 'orbit', name: 'Catapulte électromagnétique lunaire', icon: '🎯', era: 9,
+    desc: 'Sans atmosphère, on lance le matériel depuis la Lune sur un simple rail.',
+    baseCost: 8e16, growth: 1.3, slots: 0, watts: 0,
+    provides: { lift: 400_000 },
+  },
+  {
+    id: 'deorbitlaser', cat: 'orbit', name: 'Laser de désorbitation', icon: '🔫', era: 9,
+    desc: 'Il freine les débris à distance pour qu’ils brûlent dans l’atmosphère.',
+    baseCost: 2e17, growth: 1.25, slots: 0, watts: 0,
+    provides: { cleanup: 100_000 },
+  },
+  {
+    id: 'elevator', cat: 'orbit', name: 'Ascenseur spatial', icon: '🛗', era: 9,
+    desc: 'Un câble de 100 000 km jusqu’à l’orbite géostationnaire. Ça monte tout seul.',
+    baseCost: 1.6e18, growth: 1.3, slots: 0, watts: 0,
+    provides: { lift: 6e6 },
+  },
+  {
+    id: 'fusionfreighter', cat: 'orbit', name: 'Cargo à propulsion fusion', icon: '🚢', era: 10,
+    desc: 'Mars en trois semaines, Jupiter en deux mois.',
+    baseCost: 3.2e19, growth: 1.3, slots: 0, watts: 0,
+    provides: { lift: 1e8 },
+  },
+  {
+    id: 'vonneumann', cat: 'orbit', name: 'Sonde de von Neumann', icon: '🧬', era: 11,
+    desc: 'Arrivée à destination, elle se copie avec les ressources locales et repart.',
+    baseCost: 1e21, growth: 1.3, slots: 0, watts: 0,
+    provides: { replication: 0.0004 },
+  },
+  {
+    id: 'lasersail', cat: 'orbit', name: 'Voiles laser', icon: '⛵', era: 11,
+    desc: 'Des voiles poussées par des lasers géants vers les étoiles voisines.',
+    baseCost: 6.4e20, growth: 1.3, slots: 0, watts: 0,
+    provides: { lift: 1.6e9 },
+  },
+  {
+    id: 'seedship', cat: 'orbit', name: 'Vaisseau-graine galactique', icon: '🌱', era: 12,
+    desc: 'Il emporte de quoi fonder mille colonies à travers la galaxie.',
+    baseCost: 1e23, growth: 1.3, slots: 0, watts: 0,
+    provides: { replication: 0.004 },
+  },
+  {
+    id: 'antimatter', cat: 'orbit', name: 'Propulsion à antimatière', icon: '☢️', era: 12,
+    desc: 'Un gramme d’antimatière, et le vaisseau file à une fraction de la vitesse de la lumière.',
+    baseCost: 1.3e22, growth: 1.3, slots: 0, watts: 0,
+    provides: { lift: 2.5e10 },
+  },
 ];
 
 const STAFF: BuildingDef[] = [
@@ -484,6 +808,24 @@ const STAFF: BuildingDef[] = [
     baseCost: 30_000_000_000, growth: 1.3, slots: 0, watts: 0,
     provides: { efficiency: 0.05, rd: 200 },
   },
+  {
+    id: 'missioncontrol', cat: 'staff', name: 'Centre de contrôle de mission', icon: '🎧', era: 7,
+    desc: 'Des écrans du sol au plafond et des ingénieurs qui ne dorment jamais.',
+    baseCost: 6e12, growth: 1.3, slots: 0, watts: 0,
+    provides: { rd: 3_000, efficiency: 0.02 },
+  },
+  {
+    id: 'moonbase', cat: 'staff', name: 'Base lunaire habitée', icon: '🏕️', era: 9,
+    desc: 'Vos équipes vivent sur place : réparations et expériences en direct.',
+    baseCost: 6e16, growth: 1.3, slots: 0, watts: 0,
+    provides: { rd: 60_000, repair: 0.01 },
+  },
+  {
+    id: 'shipmind', cat: 'staff', name: 'Superintelligence de bord', icon: '🧠', era: 11,
+    desc: 'Une IA qui pilote vos installations à des années-lumière de distance.',
+    baseCost: 6e20, growth: 1.3, slots: 0, watts: 0,
+    provides: { rd: 1.2e6, efficiency: 0.05 },
+  },
 ];
 
 /**
@@ -491,7 +833,7 @@ const STAFF: BuildingDef[] = [
  * avancées (la rentabilité d'un achat y est naturellement plus élevée à cause
  * des multiplicateurs cumulés). Réglé avec `npm run sim`.
  */
-export const ERA_COST_SCALE = [1, 1, 1, 1.5, 2, 3];
+export const ERA_COST_SCALE = [1, 1, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export const BUILDINGS: BuildingDef[] = [
   ...SERVERS,
@@ -502,13 +844,15 @@ export const BUILDINGS: BuildingDef[] = [
   ...SPACE,
   ...SALES,
   ...STAFF,
+  ...ORBIT,
 ].map((b) => ({ ...b, baseCost: b.baseCost * ERA_COST_SCALE[b.era - 1] }));
 
 export const BUILDING_BY_ID: Record<string, BuildingDef> = Object.fromEntries(
   BUILDINGS.map((b) => [b.id, b]),
 );
 
-export const CATEGORIES: { id: Category; name: string; icon: string }[] = [
+/** `era` : ère à partir de laquelle la catégorie apparaît dans la boutique. */
+export const CATEGORIES: { id: Category; name: string; icon: string; era?: number }[] = [
   { id: 'servers', name: 'Serveurs', icon: '🖥️' },
   { id: 'storage', name: 'Stockage', icon: '💾' },
   { id: 'network', name: 'Réseau', icon: '🌐' },
@@ -517,4 +861,5 @@ export const CATEGORIES: { id: Category; name: string; icon: string }[] = [
   { id: 'space', name: 'Espace', icon: '📐' },
   { id: 'sales', name: 'Commercial', icon: '📈' },
   { id: 'staff', name: 'Équipe', icon: '👥' },
+  { id: 'orbit', name: 'Spatial', icon: '🚀', era: 7 },
 ];

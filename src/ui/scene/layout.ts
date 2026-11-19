@@ -35,10 +35,47 @@ export interface RackLayout {
   shell: boolean;
 }
 
+/** Scènes de la conquête spatiale, dessinées entièrement en SVG. */
+export type SpaceKind = 'orbit' | 'system' | 'galaxy';
+
+/** Astre peint dans l'illustration (pixels de la scène 1600 × 900). */
+export interface Body {
+  x: number;
+  y: number;
+  r: number;
+}
+
+export interface SpaceLayout {
+  mode: 'space';
+  kind: SpaceKind;
+  /** Astres peints dans le fond (mesurés dans public/assets/manifest.json). */
+  earth: Body;
+  moon: Body | null;
+  sun: Body;
+}
+
+/** Repères normalisés du manifeste → pixels de la scène. */
+const body = (cx: number, cy: number, r: number): Body => ({ x: cx * SCENE_W, y: cy * SCENE_H, r: r * SCENE_W });
+
+/** Géométrie par défaut (décor procédural, sans illustration). */
+const DEFAULT_EARTH: Body = { x: 470, y: 1040, r: 600 };
+const DEFAULT_MOON: Body = { x: 1310, y: 250, r: 120 };
+const DEFAULT_SUN: Body = { x: 800, y: 450, r: 34 };
+
+const SPACE_SCENES: Record<number, { earth?: Body; moon?: Body; sun?: Body }> = {
+  7: { earth: body(0.2698, 1.1359, 0.3393) },
+  8: { earth: body(0.2695, 1.1357, 0.3393) },
+  9: { earth: body(0.2697, 1.1349, 0.3388), moon: body(0.8168, 0.2905, 0.0753) },
+  10: { sun: body(0.5, 0.5, 0.0209) },
+  11: {},
+  12: {},
+};
+
 export interface EraScene {
-  background: string;
+  /** Illustration de fond (null : décor procédural de la conquête spatiale). */
+  background: string | null;
   transition: string | null;
-  layout: BenchLayout | RackLayout;
+  layout: BenchLayout | RackLayout | SpaceLayout;
   /** Point d'arrivée du trafic Internet (box, boîtier fibre, chemin de câbles…). */
   packetFrom: [number, number];
 }
@@ -94,6 +131,34 @@ export const ERA_SCENES: Record<number, EraScene> = {
   },
 };
 
+/** Acte II (orbite, système solaire) puis acte III (galaxie). */
+export function spaceKind(era: number): SpaceKind | null {
+  if (era >= 11) return 'galaxy';
+  if (era >= 10) return 'system';
+  if (era >= 7) return 'orbit';
+  return null;
+}
+
 export function eraScene(era: number): EraScene {
+  const kind = spaceKind(era);
+  if (kind) {
+    const e = Math.min(12, era);
+    const g = SPACE_SCENES[e] ?? {};
+    return {
+      background: asset(`assets/eras/era-${e}.webp`),
+      transition: asset(`assets/transitions/era-${e}.webp`),
+      layout: {
+        mode: 'space',
+        kind,
+        earth: g.earth ?? DEFAULT_EARTH,
+        moon: e >= 9 ? (g.moon ?? DEFAULT_MOON) : null,
+        sun: g.sun ?? DEFAULT_SUN,
+      },
+      packetFrom: [560, 520],
+    };
+  }
   return ERA_SCENES[Math.max(1, Math.min(6, era))];
 }
+
+/** Illustration de l'écran de fin. */
+export const VICTORY_IMAGE = asset('assets/transitions/victory.webp');

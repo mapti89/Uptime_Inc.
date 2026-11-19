@@ -1,12 +1,33 @@
 import type { GameState } from '../types';
 import { SAVE_VERSION, newGame } from './state';
+import { ACHIEVEMENT_BY_ID } from '../data/achievements';
+import { legacyTierCost } from '../data/upgrades';
 
 export const SAVE_KEY = 'uptime-inc-save';
 
 type Migration = (raw: Record<string, unknown>) => Record<string, unknown>;
 
 /** migrations[v] transforme une sauvegarde de version v en version v+1. */
-const MIGRATIONS: Record<number, Migration> = {};
+const MIGRATIONS: Record<number, Migration> = {
+  // v1 → v2 : refonte électricité / refroidissement / espace.
+  1: (raw) => {
+    // Succès « 50 / 100 × » d'infrastructure supprimés.
+    const ach = { ...((raw.achievements as Record<string, number>) ?? {}) };
+    for (const id of Object.keys(ach)) if (!ACHIEVEMENT_BY_ID[id]) delete ach[id];
+    // Paliers par quantité de l'électricité et du refroidissement supprimés :
+    // remboursés au coût d'origine.
+    const upgrades = { ...((raw.upgrades as Record<string, boolean>) ?? {}) };
+    let refund = 0;
+    for (const id of Object.keys(upgrades)) {
+      const cost = legacyTierCost(id);
+      if (cost === null) continue;
+      refund += cost;
+      delete upgrades[id];
+    }
+    const money = typeof raw.money === 'number' ? raw.money : 0;
+    return { ...raw, achievements: ach, upgrades, money: money + refund };
+  },
+};
 
 /** Fusionne profondément une sauvegarde avec un état neuf (tolère les champs manquants). */
 function mergeDefaults<T>(base: T, data: unknown): T {

@@ -6,6 +6,14 @@ import { fmt } from '../format';
 import { eraScene, SCENE_H, SCENE_W, type BenchLayout, type RackLayout } from '../scene/layout';
 import { benchDevices, rackUnits } from '../scene/allocate';
 import { Device, deviceSize, RackUnit, SpriteDefs } from '../scene/Sprites';
+import { SpaceScene, spaceSource, spaceTarget } from '../scene/SpaceScene';
+
+/** Parc spatial (clé stable pour le décor procédural). */
+function spaceKey(owned: Record<string, number>): string {
+  let k = '';
+  for (const b of BUILDINGS) if (b.era >= 7 && owned[b.id]) k += `${b.id}:${owned[b.id]},`;
+  return k;
+}
 
 /** Clé stable du parc de machines (le state est cloné à chaque tick). */
 function machineKey(owned: Record<string, number>): string {
@@ -160,6 +168,10 @@ const Packets = memo(function Packets({
 export function ServerRoom({ compact = false }: { compact?: boolean } = {}) {
   const era = useGame((g) => g.state.era);
   const ownedKey = useGame((g) => machineKey(g.state.owned));
+  const spaceOwnedKey = useGame((g) => (g.state.era >= 7 ? spaceKey(g.state.owned) : ''));
+  const debrisLoad = useGame((g) => (g.snap.cleanupCap > 0 ? g.snap.debris / g.snap.cleanupCap : 0));
+  const stars = useGame((g) => g.state.stars);
+  const dyson = useGame((g) => (g.state.owned.dysonsphere ?? 0) + (g.state.owned.dysonswarm ?? 0));
   const slotsUsed = useGame((g) => g.snap.slotsUsed);
   const slotsCap = useGame((g) => g.snap.slotsCap);
   const clickValue = useGame((g) => g.snap.clickValue);
@@ -195,11 +207,13 @@ export function ServerRoom({ compact = false }: { compact?: boolean } = {}) {
   const dropped = Math.min(packetCount, Math.round(packetCount * (1 - quality) + (ddos ? 3 : 0)));
   const packetDur = Math.round((3 - load * 1.6) * 5) / 5;
 
-  const target: [number, number] =
-    scene.layout.mode === 'bench'
+  const space = scene.layout.mode === 'space' ? scene.layout.kind : null;
+  const target: [number, number] = space
+    ? spaceTarget(space)
+    : scene.layout.mode === 'bench'
       ? [scene.layout.x + scene.layout.w / 2, scene.layout.floor - 30]
       : (() => {
-          const r = scene.layout.racks;
+          const r = (scene.layout as RackLayout).racks;
           const mid = r[Math.floor(r.length / 2)];
           return [mid.x + mid.w / 2, mid.y + 20] as [number, number];
         })();
@@ -246,18 +260,35 @@ export function ServerRoom({ compact = false }: { compact?: boolean } = {}) {
         <svg className="scene-svg" viewBox={`0 0 ${SCENE_W} ${SCENE_H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <SpriteDefs />
           <g className="scene-world">
-            <image key={scene.background} className="scene-bg" href={scene.background} width={SCENE_W} height={SCENE_H} />
-            {scene.layout.mode === 'bench' ? (
-              <BenchLayer layout={scene.layout} ownedKey={ownedKey} />
+            {scene.layout.mode === 'space' ? (
+              <SpaceScene
+                kind={scene.layout.kind}
+                era={era}
+                ownedKey={spaceOwnedKey}
+                debrisLoad={debrisLoad}
+                stars={stars}
+                dyson={dyson}
+                background={scene.background}
+                earth={scene.layout.earth}
+                moon={scene.layout.moon}
+                sun={scene.layout.sun}
+              />
             ) : (
-              <RackLayer layout={scene.layout} ownedKey={ownedKey} slotsUsed={slotsUsed} slotsCap={slotsCap} />
+              <>
+                {scene.background && <image key={scene.background} className="scene-bg" href={scene.background} width={SCENE_W} height={SCENE_H} />}
+                {scene.layout.mode === 'bench' ? (
+                  <BenchLayer layout={scene.layout} ownedKey={ownedKey} />
+                ) : (
+                  <RackLayer layout={scene.layout} ownedKey={ownedKey} slotsUsed={slotsUsed} slotsCap={slotsCap} />
+                )}
+              </>
             )}
-            <Packets from={scene.packetFrom} to={target} count={packetCount} dropped={dropped} dur={packetDur} />
+            <Packets from={space ? spaceSource(space) : scene.packetFrom} to={target} count={packetCount} dropped={dropped} dur={packetDur} />
             {hot && <rect className="heat-overlay" width={SCENE_W} height={SCENE_H} fill="url(#heatGlow)" />}
           </g>
         </svg>
 
-        {slotsUsed === 0 && <span className="scene-empty">Achetez une première machine dans l’onglet Infrastructure 👇</span>}
+        {slotsUsed === 0 && !space && <span className="scene-empty">Achetez une première machine dans l’onglet Infrastructure 👇</span>}
 
         <div className="scene-hud">
           <span className={`scene-status ${blackout ? 'down' : status}`}>

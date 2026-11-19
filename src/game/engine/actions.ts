@@ -1,4 +1,4 @@
-import type { BuildingDef, BuyAmount, GameState } from '../types';
+import type { BuildingDef, BuyAmount, GameState, UpgradeReq } from '../types';
 import { BUILDING_BY_ID } from '../data/buildings';
 import { UPGRADES, UPGRADE_BY_ID } from '../data/upgrades';
 import { RESEARCH_BY_ID } from '../data/research';
@@ -9,24 +9,48 @@ import { computeModifiers, type Modifiers } from './modifiers';
 import { computeSnapshot } from './snapshot';
 import { bulkCost, costFactor, freeSlots, maxAffordable, placeable } from './formulas';
 import { addLog, newGame } from './state';
+import { STAR_ERA } from '../data/galaxy';
 
 export interface BuyQuote {
   count: number;
   cost: number;
   /** Raison si impossible. */
-  blocked?: 'era' | 'space' | 'money' | 'max';
+  blocked?: 'era' | 'space' | 'lift' | 'money' | 'max';
+}
+
+/** Exemplaires possédés + en route (le prix suit les deux). */
+export function ownedOrPending(s: GameState, id: string): number {
+  let n = s.owned[id] ?? 0;
+  for (const tr of s.transit) if (tr.id === id) n += tr.count;
+  return n;
+}
+
+/** Nombre d'exemplaires en route. */
+export function inTransit(s: GameState, id: string): number {
+  let n = 0;
+  for (const tr of s.transit) if (tr.id === id) n += tr.count;
+  return n;
 }
 
 /** Calcule combien on achèterait et pour quel prix. */
 export function quoteBuilding(s: GameState, b: BuildingDef, amount: BuyAmount, m?: Modifiers): BuyQuote {
   const mods = m ?? computeModifiers(s);
-  const owned = s.owned[b.id] ?? 0;
+  const owned = ownedOrPending(s, b.id);
   const f = costFactor(b, mods);
   if (b.era > s.era) return { count: 0, cost: bulkCost(b, owned, 1, f), blocked: 'era' };
   const snap = computeSnapshot(s, mods);
-  const room = placeable(b, s, freeSlots(snap.slotsCap, snap.slotsUsed));
+  let room = placeable(b, s, freeSlots(snap.slotsCap, snap.slotsUsed));
+  let liftBlocked = false;
+  if (b.mass) {
+    const fit = Math.floor((snap.liftCap - snap.massUsed) / (b.mass * mods.mass) + 1e-9);
+    if (fit < room) {
+      room = Math.max(0, fit);
+      liftBlocked = true;
+    }
+  }
   if (room <= 0) {
-    return { count: 0, cost: bulkCost(b, owned, 1, f), blocked: b.max !== undefined && owned >= b.max ? 'max' : 'space' };
+    const blocked = b.max !== undefined && owned >= b.max ? 'max' : liftBlocked ? 'lift' : 'space';
+    return { count: 0, cost: bulkCost(b, owned, 1, f), blocked };
   }
   if (amount === 'max') {
     const n = Math.min(room, maxAffordable(b, owned, s.money, f));
@@ -45,7 +69,12 @@ export function buyBuilding(s: GameState, id: string, amount: BuyAmount = 1): bo
   if (q.blocked || q.count <= 0 || q.cost > s.money) return false;
   s.money -= q.cost;
   s.stats.moneySpent += q.cost;
-  s.owned[id] = (s.owned[id] ?? 0) + q.count;
+  if (b.travel) {
+    s.transit.push({ id, count: q.count, remaining: b.travel });
+    addLog(s, `${b.icon} ${q.count} × ${b.name} en route (${Math.round(b.travel / 60)} min).`, 'info');
+  } else {
+    s.owned[id] = (s.owned[id] ?? 0) + q.count;
+  }
   return true;
 }
 
@@ -53,8 +82,15 @@ export function upgradeAvailable(s: GameState, id: string): boolean {
   const u = UPGRADE_BY_ID[id];
   if (!u || s.upgrades[id]) return false;
   if (u.era > s.era) return false;
-  if (u.req && (s.owned[u.req.id] ?? 0) < u.req.count) return false;
+  if (u.req && reqMissing(s, u.req) > 0) return false;
   return true;
+}
+
+/** Ce qu'il manque pour remplir la condition (0 si elle est remplie). */
+export function reqMissing(s: GameState, req: UpgradeReq): number {
+  if ('id' in req) return Math.max(0, req.count - (s.owned[req.id] ?? 0));
+  const peak = req.usage === 'power' ? s.stats.runPeakPower : s.stats.runPeakHeat;
+  return Math.max(0, req.value - peak);
 }
 
 export function upgradeCost(id: string, m: Modifiers): number {
@@ -123,7 +159,8 @@ export function moveEra(s: GameState): boolean {
   const next = eraDef(s.era + 1);
   s.money -= next.moveCost;
   s.era = next.id;
-  addLog(s, `🚚 Déménagement : bienvenue dans l’ère « ${next.name} » !`, 'good');
+  if (s.era >= STAR_ERA) s.stars = Math.max(1, s.stars);
+  addLog(s, next.id >= 7 ? `🚀 Expansion : bienvenue dans l’ère « ${next.name} » !` : `🚚 Déménagement : bienvenue dans l’ère « ${next.name} » !`, 'good');
   return true;
 }
 
