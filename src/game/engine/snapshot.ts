@@ -3,7 +3,7 @@ import { RESOURCES } from '../types';
 import { BUILDINGS } from '../data/buildings';
 import { eraDef } from '../data/eras';
 import { REQUEST_TYPES } from '../data/requestTypes';
-import type { Modifiers } from './modifiers';
+import { effectiveProvides, type Modifiers } from './modifiers';
 
 export const BASE_CLICK = 0.5;
 const BASE_OVERHEAD = 0.5; // surcoût de refroidissement « ambiant » de l'ère
@@ -79,7 +79,7 @@ export function computeSnapshot(s: GameState, m: Modifiers): Snapshot {
     const n = s.owned[b.id] ?? 0;
     if (n <= 0) continue;
     const mult = (m.building[b.id] ?? 1) * (m.cat[b.cat] ?? 1);
-    const p = b.provides;
+    const p = effectiveProvides(b, m);
     if (p.cpu) raw.cpu += n * p.cpu * mult;
     if (p.ram) raw.ram += n * p.ram * mult;
     if (p.storage) raw.storage += n * p.storage * mult;

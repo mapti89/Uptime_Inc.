@@ -75,6 +75,7 @@ const NAMED: UpgradeDef[] = [
   { id: 'loadbalancer', name: 'Load balancers', icon: '⚖️', era: 3, cost: 60_000_000, desc: 'Efficacité +10 %.', effects: [{ kind: 'efficiency', add: 0.1 }] },
   { id: 'hvdc', name: 'Distribution HVDC', icon: '🔋', era: 4, cost: 600_000_000, desc: 'Consommation des serveurs −15 %.', effects: [{ kind: 'wattsMult', mult: 0.85 }] },
   { id: 'ppa', name: 'Contrat PPA vert', icon: '📃', era: 4, cost: 1_500_000_000, desc: 'Prix de l’électricité −30 %.', effects: [{ kind: 'elecPriceMult', mult: 0.7 }] },
+  { id: 'pcigpu', name: 'Cartes GPU PCIe', icon: '🎮', era: 4, cost: 700_000_000, req: { id: 'ocp', count: 1 }, desc: '+2 GPU par rack OCP et par rack ARM : de quoi accueillir les premiers clients IA.', effects: [{ kind: 'buildingAdd', id: 'ocp', res: 'gpu', add: 2 }, { kind: 'buildingAdd', id: 'arm', res: 'gpu', add: 2 }] },
   { id: 'anycast', name: 'Anycast', icon: '📡', era: 4, cost: 3_000_000_000, desc: 'Bande passante ×1,5.', effects: [{ kind: 'statMult', stat: 'bw', mult: 1.5 }] },
   { id: 'heatreuse', name: 'Réseau de chaleur urbain', icon: '♨️', era: 5, cost: 80_000_000_000, desc: 'Vous revendez votre chaleur : électricité −25 %, PUE −20 %.', effects: [{ kind: 'elecPriceMult', mult: 0.75 }, { kind: 'pueMult', mult: 0.8 }] },
   { id: 'customasic', name: 'ASIC maison', icon: '🔧', era: 5, cost: 250_000_000_000, desc: 'GPU ×1,5.', effects: [{ kind: 'statMult', stat: 'gpu', mult: 1.5 }] },

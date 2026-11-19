@@ -146,3 +146,26 @@ describe('sauvegarde', () => {
     expect(back.prestige.shares).toBe(0);
   });
 });
+
+describe('Cartes GPU PCIe', () => {
+  it('ajoute 2 GPU par rack OCP et ARM, et seulement une fois achetée', () => {
+    const s = newGame();
+    s.era = 4;
+    s.owned = { ocp: 3, arm: 2 };
+    const before = computeSnapshot(s, computeModifiers(s));
+    expect(before.supply.gpu).toBe(0);
+    expect(A.upgradeAvailable(s, 'pcigpu')).toBe(true);
+
+    s.upgrades.pcigpu = true;
+    const m = computeModifiers(s);
+    const after = computeSnapshot(s, m);
+    // 5 racks × 2 GPU, modulés par l'efficacité globale
+    expect(after.supply.gpu).toBeCloseTo(10 * m.stat.gpu * after.efficiency, 6);
+  });
+
+  it("n'est pas proposée sans rack OCP", () => {
+    const s = newGame();
+    s.era = 4;
+    expect(A.upgradeAvailable(s, 'pcigpu')).toBe(false);
+  });
+});

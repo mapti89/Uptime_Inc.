@@ -1,4 +1,4 @@
-import type { Category, Effect, Flag, GameState, Res, Stat } from '../types';
+import type { BuildingDef, Category, Effect, Flag, GameState, Provides, Res, Stat } from '../types';
 import { UPGRADE_BY_ID } from '../data/upgrades';
 import { RESEARCH_BY_ID } from '../data/research';
 import { ACHIEVEMENT_BONUS } from '../data/achievements';
@@ -8,6 +8,8 @@ import { BUILDINGS } from '../data/buildings';
 /** Agrégat de tous les effets actifs (upgrades, recherche, prestige, succès). */
 export interface Modifiers {
   building: Record<string, number>;
+  /** Production ajoutée par exemplaire, par bâtiment (effets `buildingAdd`). */
+  buildingAdd: Record<string, Partial<Record<Res, number>>>;
   cat: Partial<Record<Category, number>>;
   stat: Record<Stat, number>;
   price: number;
@@ -35,6 +37,7 @@ export interface Modifiers {
 export function emptyModifiers(): Modifiers {
   return {
     building: {},
+    buildingAdd: {},
     cat: {},
     stat: { cpu: 1, ram: 1, storage: 1, gpu: 1, bw: 1, power: 1, cooling: 1, space: 1, traffic: 1, rd: 1, autoClick: 1 },
     price: 1,
@@ -65,6 +68,11 @@ export function applyEffect(m: Modifiers, e: Effect): void {
     case 'buildingMult':
       m.building[e.id] = (m.building[e.id] ?? 1) * e.mult;
       break;
+    case 'buildingAdd': {
+      const add = (m.buildingAdd[e.id] ??= {});
+      add[e.res] = (add[e.res] ?? 0) + e.add;
+      break;
+    }
     case 'catMult':
       m.cat[e.cat] = (m.cat[e.cat] ?? 1) * e.mult;
       break;
@@ -126,6 +134,15 @@ export function applyEffect(m: Modifiers, e: Effect): void {
       m.revenue *= e.mult;
       break;
   }
+}
+
+/** Production unitaire d'un bâtiment, bonus `buildingAdd` compris (hors multiplicateurs). */
+export function effectiveProvides(b: BuildingDef, m: Modifiers): Provides {
+  const add = m.buildingAdd[b.id];
+  if (!add) return b.provides;
+  const p: Provides = { ...b.provides };
+  for (const [r, v] of Object.entries(add) as [Res, number][]) p[r] = (p[r] ?? 0) + v;
+  return p;
 }
 
 export function computeModifiers(s: GameState): Modifiers {

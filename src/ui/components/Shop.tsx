@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../game/store';
 import { BUILDINGS, CATEGORIES } from '../../game/data/buildings';
 import { quoteBuilding } from '../../game/engine/actions';
+import { effectiveProvides } from '../../game/engine/modifiers';
 import type { BuildingDef, BuyAmount, Provides } from '../../game/types';
 import { GameIcon } from './GameIcon';
 import { useUi } from '../uiStore';
@@ -59,7 +60,7 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
         </span>
         <span className="shop-desc">{b.desc}</span>
         <span className="shop-stats">
-          {describeProvides(b.provides, mult).map((t) => (
+          {describeProvides(effectiveProvides(b, mods), mult).map((t) => (
             <span key={t} className="stat-pill">
               {t}
             </span>
@@ -112,6 +113,7 @@ export function Shop() {
     };
   }, [focus, clearFocus]);
   const era = useGame((g) => g.state.era);
+  const mods = useGame((g) => g.mods);
   const amount = useGame((g) => g.state.settings.buyAmount);
   const setAmount = useGame((g) => g.setBuyAmount);
   const items = BUILDINGS.filter((b) => b.cat === cat && b.era <= era + 1);
@@ -145,7 +147,7 @@ export function Shop() {
             </div>
           ) : (
             (() => {
-              const hit = !!focus && !!b.provides[focus.key];
+              const hit = !!focus && !!effectiveProvides(b, mods)[focus.key];
               // La clé change avec le raccourci pour relancer l'animation de surbrillance.
               return <ShopItem key={hit ? `${b.id}-${focus.nonce}` : b.id} b={b} focus={hit} />;
             })()

@@ -68,6 +68,8 @@ export interface BuildingDef {
 
 export type Effect =
   | { kind: 'buildingMult'; id: string; mult: number }
+  /** Ajoute `add` unités de la ressource `res` à chaque exemplaire possédé du bâtiment `id`. */
+  | { kind: 'buildingAdd'; id: string; res: Res; add: number }
   | { kind: 'catMult'; cat: Category; mult: number }
   | { kind: 'statMult'; stat: Stat; mult: number }
   | { kind: 'priceMult'; mult: number; reqType?: string }
