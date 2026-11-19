@@ -39,6 +39,7 @@ function Gauge({
       <div className="bar thin">
         <div className={`bar-fill ${tone}`} style={{ width: `${shown * 100}%` }} />
       </div>
+      {hint && <p className="gauge-hint">{hint}</p>}
     </div>
   );
 }

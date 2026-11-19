@@ -157,7 +157,7 @@ const Packets = memo(function Packets({
 
 // --- Composant principal ------------------------------------------------------
 
-export function ServerRoom() {
+export function ServerRoom({ compact = false }: { compact?: boolean } = {}) {
   const era = useGame((g) => g.state.era);
   const ownedKey = useGame((g) => machineKey(g.state.owned));
   const slotsUsed = useGame((g) => g.snap.slotsUsed);
@@ -236,7 +236,7 @@ export function ServerRoom() {
   const statusLabel = blackout ? 'Panne de courant' : status === 'down' ? 'Hors service' : status === 'degraded' ? 'Dégradé' : 'Opérationnel';
 
   return (
-    <div className="panel server-room">
+    <div className={`panel server-room ${compact ? 'compact' : ''}`}>
       <button
         className={classes}
         style={{ '--blink': `${0.35 + (1 - load) * 1.4}s` } as CSSProperties}
