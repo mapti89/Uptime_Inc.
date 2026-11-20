@@ -2113,6 +2113,11 @@ button,
   border-color: var(--accent2);
   color: var(--accent2);
 }
+.stat-pill.warn {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: transparent;
+}
 .latency-tag {
   margin-left: 6px;
   font-size: 12px;

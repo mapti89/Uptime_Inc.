@@ -80,21 +80,30 @@ export function ResourceGauges() {
     <div className="panel gauges">
       <h3>📟 Ressources</h3>
       <p className="muted small">Demande / capacité. Au-delà de 100 %, les requêtes sont perdues.</p>
-      {RESOURCES.filter((r) => r !== 'gpu' || era >= 5 || snap.supply.gpu > 0).map((r) => (
-        <Gauge
-          key={r}
-          label={RES_LABEL[r]}
-          used={snap.need[r]}
-          cap={snap.supply[r]}
-          text={`${resValue(r, snap.need[r])} / ${resValue(r, snap.supply[r])}`}
-          hint={
-            snap.remoteSupply[r] > 0
-              ? `dont ${resValue(r, snap.remoteSupply[r])} lointains (requêtes tolérantes à la latence uniquement)`
-              : undefined
-          }
-          go={RES_SHOP[r]}
-        />
-      ))}
+      {RESOURCES.filter((r) => r !== 'gpu' || era >= 5 || snap.supply.gpu > 0).map((r) => {
+        // Avec du matériel lointain, la vraie limite est souvent celle du temps réel :
+        // la jauge montre la plus contraignante des deux.
+        const far = snap.remoteSupply[r] > 0;
+        const rtWorse = far && snap.needRealtime[r] * snap.supply[r] > snap.need[r] * snap.realtimeCap[r];
+        const used = rtWorse ? snap.needRealtime[r] : snap.need[r];
+        const cap = rtWorse ? snap.realtimeCap[r] : snap.supply[r];
+        const bridge = Math.round(snap.latencyBridge * 100);
+        return (
+          <Gauge
+            key={r}
+            label={RES_LABEL[r]}
+            used={used}
+            cap={cap}
+            text={`${rtWorse ? '⚡ ' : ''}${resValue(r, used)} / ${resValue(r, cap)}`}
+            hint={
+              far
+                ? `${rtWorse ? '⚡ Temps réel (le plus limitant) — ' : ''}${resValue(r, snap.remoteSupply[r])} lointains : ils servent les requêtes tolérantes, et ${bridge} % seulement sert aussi le temps réel. Total : ${resValue(r, snap.need[r])} / ${resValue(r, snap.supply[r])} · temps réel : ${resValue(r, snap.needRealtime[r])} / ${resValue(r, snap.realtimeCap[r])}.`
+                : undefined
+            }
+            go={RES_SHOP[r]}
+          />
+        );
+      })}
       <div className="sep" />
       <Gauge
         label="⚡ Électricité"

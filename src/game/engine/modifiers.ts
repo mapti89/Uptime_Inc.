@@ -4,6 +4,7 @@ import { RESEARCH_BY_ID } from '../data/research';
 import { ACHIEVEMENT_BONUS } from '../data/achievements';
 import { shareBonus } from '../data/prestige';
 import { BUILDINGS } from '../data/buildings';
+import { ERAS } from '../data/eras';
 
 /** Agrégat de tous les effets actifs (upgrades, recherche, prestige, succès). */
 export interface Modifiers {
@@ -157,6 +158,8 @@ export function effectiveProvides(b: BuildingDef, m: Modifiers): Provides {
 
 export function computeModifiers(s: GameState): Modifiers {
   const m = emptyModifiers();
+  // Pont de latence de base : acquis à l'arrivée dans l'ère qui le définit, et conservé ensuite.
+  for (const e of ERAS) if (e.id <= s.era) m.latencyBridge = Math.max(m.latencyBridge, e.latencyBridge ?? 0);
   for (const id in s.upgrades) {
     const u = UPGRADE_BY_ID[id];
     if (u) for (const e of u.effects) applyEffect(m, e);

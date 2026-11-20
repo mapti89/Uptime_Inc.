@@ -221,19 +221,26 @@ export function computeSnapshot(s: GameState, m: Modifiers): Snapshot {
   const ratio = zeroRes();
   for (const r of RESOURCES) ratio[r] = need[r] <= 0 ? 1 : Math.min(1, supply[r] / need[r]);
 
-  // Latence : les requêtes temps réel n'ont accès qu'au matériel proche (plus
-  // la part « pontée » du matériel lointain) et le consomment en premier ; les
-  // requêtes tolérantes se partagent tout le reste.
+  // Latence et pénurie. Le matériel lointain se divise en une part « pontée » (accessible
+  // aussi au temps réel) et le reste, réservé aux requêtes tolérantes. Les tolérantes
+  // utilisent d'abord ce reste ; puis le matériel proche et la part pontée sont partagés
+  // au prorata des besoins : une pénurie de x % fait perdre ~x % à chacun, au lieu de
+  // priver entièrement les requêtes tolérantes.
   const bridge = m.flags.has('wormhole') ? 1 : m.latencyBridge;
   const ratioRealtime = zeroRes();
   const ratioTolerant = zeroRes();
+  const realtimeCap = zeroRes();
   for (const r of RESOURCES) {
     const needI = needRealtime[r];
     const needT = need[r] - needI;
-    const usedI = Math.min(needI, near[r] + far[r] * bridge);
-    ratioRealtime[r] = needI <= 0 ? 1 : usedI / needI;
-    const left = supply[r] - usedI;
-    ratioTolerant[r] = needT <= 0 ? 1 : Math.min(1, Math.max(0, left) / needT);
+    const farOnly = far[r] * (1 - bridge);
+    const fromFar = Math.min(needT, farOnly);
+    const restT = needT - fromFar;
+    const shared = near[r] + far[r] * bridge;
+    realtimeCap[r] = shared;
+    const k = needI + restT <= shared ? 1 : shared / (needI + restT);
+    ratioRealtime[r] = needI <= 0 ? 1 : k;
+    ratioTolerant[r] = needT <= 0 ? 1 : (fromFar + restT * k) / needT;
   }
 
   // --- Service ---
@@ -283,7 +290,7 @@ export function computeSnapshot(s: GameState, m: Modifiers): Snapshot {
     itWatts, totalWatts, powerCap, heat, coolCap, heatDissipated, pue,
     powerFactor, coolFactor, efficiency,
     slotsUsed, slotsCap, massUsed, liftCap, debris, cleanupCap, debrisFactor,
-    remoteSupply: far, replication, starMult, traffic, rdRate, autoClick, clickValue, autoClickValue, consumedW, energyShare,
+    remoteSupply: far, needRealtime, realtimeCap, latencyBridge: bridge, replication, starMult, traffic, rdRate, autoClick, clickValue, autoClickValue, consumedW, energyShare,
     repairRate,
     slaMult, globalMult,
   };

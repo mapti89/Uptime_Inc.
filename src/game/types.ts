@@ -177,6 +177,8 @@ export interface EraDef {
   };
   /** Part de référence du chiffre d'affaires consacrée à l'énergie (PUE 1,5). */
   energyShare: number;
+  /** Part du matériel lointain qui sert aussi les requêtes temps réel dès l'arrivée dans l'ère. */
+  latencyBridge?: number;
 }
 
 export interface ActiveEvent {
@@ -307,6 +309,11 @@ export interface Snapshot {
   debrisFactor: number;
   /** Capacité servant uniquement les requêtes tolérantes (matériel lointain). */
   remoteSupply: Record<Res, number>;
+  /** Besoin des requêtes temps réel, et capacité qui leur est accessible (proche + part pontée du lointain). */
+  needRealtime: Record<Res, number>;
+  realtimeCap: Record<Res, number>;
+  /** Part du matériel lointain qui sert aussi le temps réel. */
+  latencyBridge: number;
   replication: number;
   /** Bonus de demande lié à la colonisation stellaire. */
   starMult: number;

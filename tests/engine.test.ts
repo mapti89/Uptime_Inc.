@@ -303,20 +303,49 @@ describe('conquête spatiale', () => {
     expect(computeSnapshot(s, computeModifiers(s)).debrisFactor).toBe(1);
   });
 
-  it('le matériel lointain ne sert que les requêtes tolérantes à la latence', () => {
+  it('le matériel lointain sert surtout les requêtes tolérantes à la latence', () => {
     const s = spaceGame(10);
     s.owned = { marsdc: 50, fusionfreighter: 5, deepnet: 20, marscolonies: 3 };
     s.reputation = 100;
-    const snap = computeSnapshot(s, computeModifiers(s));
+    const m = computeModifiers(s);
+    const snap = computeSnapshot(s, m);
     expect(snap.remoteSupply.cpu).toBeGreaterThan(0);
-    // Pas de matériel proche : rien de temps réel n'est servi…
-    expect(snap.served.static).toBe(0);
-    // …mais les simulations scientifiques (tolérantes) le sont.
-    expect(snap.served.scisim).toBeGreaterThan(0);
+    // Pont de base de l'ère 10 : un quart du matériel lointain sert aussi le temps réel…
+    expect(snap.latencyBridge).toBe(0.25);
+    expect(snap.realtimeCap.cpu).toBeCloseTo(snap.supply.cpu - snap.remoteSupply.cpu * 0.75, -3);
+    expect(snap.served.static).toBeGreaterThan(0);
+    // …et sans ce pont, rien de temps réel n'est servi sans matériel proche.
+    m.latencyBridge = 0;
+    const noBridge = computeSnapshot(s, m);
+    expect(noBridge.served.static).toBe(0);
+    // Les simulations scientifiques (tolérantes) le sont.
+    expect(noBridge.served.scisim).toBeGreaterThan(0);
     // Un trou de ver supprime la contrainte.
     s.owned.wormhole = 1;
     s.era = 11;
-    expect(computeSnapshot(s, computeModifiers(s)).served.static).toBeGreaterThan(0);
+    const worm = computeSnapshot(s, computeModifiers(s));
+    expect(worm.latencyBridge).toBe(1);
+    expect(worm.realtimeCap.cpu).toBeCloseTo(worm.supply.cpu, -3);
+  });
+
+  it('une pénurie est répartie au prorata entre requêtes temps réel et tolérantes', () => {
+    const s = newGame();
+    s.era = 4;
+    s.reputation = 100;
+    s.owned = { blade: 10, san: 10, adsl: 10, forum: 10 };
+    const m = computeModifiers(s);
+    m.stat.cpu = m.stat.ram = m.stat.storage = 1e6;
+    // Bande passante réglée à 90 % du besoin.
+    const before = computeSnapshot(s, m);
+    m.stat.bw *= (0.9 * before.need.bw) / before.supply.bw;
+    const snap = computeSnapshot(s, m);
+    expect(snap.ratio.bw).toBeCloseTo(0.9, 6);
+    // 10 % de bande passante en moins : chaque type qui en dépend perd 10 %, y compris
+    // la sauvegarde (tolérante), qui n'est plus sacrifiée au profit du temps réel.
+    for (const id of ['static', 'api', 'streaming', 'backup']) {
+      expect(snap.served[id] / snap.demand[id]).toBeCloseTo(0.9, 6);
+    }
+    expect(snap.served.db).toBeCloseTo(snap.demand.db, 6);
   });
 
   it('le matériel interstellaire voyage avant d’être opérationnel', () => {

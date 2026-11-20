@@ -111,6 +111,9 @@ export const ERAS: EraDef[] = [
     moveCost: 6e24,
     base: { space: 300_000, power: 2e9, cooling: 6e8, bw: 2e13, traffic: 3e9, lift: 1e6, cleanup: 20_000 },
     energyShare: 0.35,
+    // Tout le calcul de l'ère est lointain : sans pont de base, la demande temps réel
+    // (l'essentiel) ne pourrait être servie que par le matériel des ères précédentes.
+    latencyBridge: 0.25,
   },
   {
     id: 11,

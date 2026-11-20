@@ -35,6 +35,9 @@ function describeProvides(p: Provides, mult: number): string[] {
 function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
   const s = useGame((g) => g.state);
   const mods = useGame((g) => g.mods);
+  const bridge = useGame((g) => g.snap.latencyBridge);
+  // Part de la demande déjà perdue : acheter encore de la demande (ventes) n'aidera pas.
+  const lost = useGame((g) => (g.snap.totalDemand > 0 ? 1 - g.snap.totalServed / g.snap.totalDemand : 0));
   const buy = useGame((g) => g.buy);
   const owned = s.owned[b.id] ?? 0;
   const pending = b.travel ? inTransit(s, b.id) : 0;
@@ -73,7 +76,23 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
           {b.slots > 0 && <span className="stat-pill space">{b.slots} U</span>}
           {b.mass !== undefined && <span className="stat-pill space">🚀 {mass(b.mass * mods.mass)}</span>}
           {b.debris !== undefined && <span className="stat-pill">🛰️ {mass(b.debris * mods.mass)} de débris</span>}
-          {b.remote && <span className="stat-pill remote" title="Trop loin pour les requêtes temps réel : ne sert que les requêtes tolérantes à la latence.">🐢 lointain</span>}
+          {b.remote && (
+            <span
+              className="stat-pill remote"
+              title={
+                bridge > 0
+                  ? `Trop loin pour le temps réel : sert les requêtes tolérantes à la latence, et seulement ${Math.round(bridge * 100)} % de sa capacité sert aussi les requêtes temps réel (sites, API, BDD…).`
+                  : 'Trop loin pour les requêtes temps réel : ne sert que les requêtes tolérantes à la latence.'
+              }
+            >
+              🐢 lointain{bridge > 0 && bridge < 1 ? ` · ${Math.round(bridge * 100)} % temps réel` : ''}
+            </span>
+          )}
+          {b.provides.traffic && lost > 0.05 && (
+            <span className="stat-pill warn" title="Vos machines ne suivent déjà pas : plus de demande ne fera que perdre plus de requêtes (uptime et réputation en baisse).">
+              ⚠️ {Math.round(lost * 100)} % de la demande déjà perdue
+            </span>
+          )}
           {b.travel !== undefined && <span className="stat-pill">⏳ voyage {duration(b.travel)}</span>}
           {b.overhead !== undefined && <span className="stat-pill">surcoût PUE {b.overhead}</span>}
         </span>
