@@ -21,6 +21,9 @@ interface Row {
   used: number;
   cap: number;
   text: string;
+  /** Capacité d'origine « proche » : la barre distingue alors la part proche et la part lointaine pontée. */
+  near?: number;
+  legend?: ReactNode;
 }
 
 const Arrow = () => (
@@ -41,9 +44,21 @@ function GaugeRow({ row, sub, arrow }: { row: Row; sub?: boolean; arrow?: boolea
           {arrow && <Arrow />}
         </span>
       </span>
-      <span className="bar thin">
-        <span className={`bar-fill ${tone}`} style={{ width: `${shown * 100}%` }} />
-      </span>
+      {row.near === undefined ? (
+        <span className="bar thin">
+          <span className={`bar-fill ${tone}`} style={{ width: `${shown * 100}%` }} />
+        </span>
+      ) : (
+        // Utilisation découpée : d'abord le matériel proche, puis la part pontée du lointain (hachurée).
+        <span className="bar thin split">
+          <span className={`bar-fill ${tone}`} style={{ width: `${(Math.min(row.used, row.near) / (row.cap || 1)) * 100}%` }} />
+          <span
+            className={`bar-fill ${tone} bridged`}
+            style={{ width: `${(Math.min(Math.max(0, row.used - row.near), row.cap - row.near) / (row.cap || 1)) * 100}%` }}
+          />
+        </span>
+      )}
+      {row.legend && <span className="gauge-legend">{row.legend}</span>}
     </>
   );
 }
@@ -145,10 +160,14 @@ function ResourceTip({ r }: { r: Res }) {
             <dt>⚡ Temps réel</dt>
             <dd>
               {resValue(r, snap.needRealtime[r])} / {resValue(r, snap.realtimeCap[r])}
+              <br />
+              <span className="muted">
+                = proche {resValue(r, snap.supply[r] - far)} + lointain {resValue(r, far * snap.latencyBridge)}
+              </span>
             </dd>
             <dt>🐢 Matériel lointain</dt>
             <dd>
-              {resValue(r, far)} (dont {bridge} % pour le temps réel)
+              {resValue(r, far)}, dont {resValue(r, far * snap.latencyBridge)} ({bridge} %) utilisables aussi par le ⚡ temps réel
             </dd>
           </>
         )}
@@ -213,10 +232,30 @@ export function ResourceGauges() {
           // Deux barres : le temps réel (proche + part pontée) et le tolérant (le reste du lointain,
           // plus ce que le temps réel laisse du matériel partagé).
           const needT = snap.need[r] - snap.needRealtime[r];
-          const tolCap = far * (1 - snap.latencyBridge) + Math.max(0, snap.realtimeCap[r] - snap.needRealtime[r]);
+          const bridged = far * snap.latencyBridge;
+          const near = snap.supply[r] - far;
+          const reserved = far - bridged;
+          const bridgePct = Math.round(snap.latencyBridge * 100);
           rows = [
-            { label: '⚡ Temps réel', used: snap.needRealtime[r], cap: snap.realtimeCap[r], text: `${resValue(r, snap.needRealtime[r])} / ${resValue(r, snap.realtimeCap[r])}` },
-            { label: '🐢 Tolérant', used: needT, cap: tolCap, text: `${resValue(r, needT)} / ${resValue(r, tolCap)}` },
+            {
+              label: '⚡ Temps réel',
+              used: snap.needRealtime[r],
+              cap: snap.realtimeCap[r],
+              near,
+              text: `${resValue(r, snap.needRealtime[r])} / ${resValue(r, snap.realtimeCap[r])}`,
+              legend: (
+                <>
+                  <i className="swatch" /> proche {resValue(r, near)} · <i className="swatch bridged" /> lointain {bridgePct} %{' '}
+                  {resValue(r, bridged)}
+                </>
+              ),
+            },
+            {
+              label: `🐢 Tolérant seul (${100 - bridgePct} %)`,
+              used: needT,
+              cap: reserved,
+              text: `${resValue(r, needT)} / ${resValue(r, reserved)}`,
+            },
           ];
         } else {
           rows = [{ label: RES_LABEL[r], used: snap.need[r], cap: snap.supply[r], text: `${resValue(r, snap.need[r])} / ${resValue(r, snap.supply[r])}` }];

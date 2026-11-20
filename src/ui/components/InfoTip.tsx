@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
-const OPEN_DELAY_MS = 250;
+const OPEN_DELAY_MS = 500;
 const MARGIN = 8;
 
 /** Survol possible (souris) : sinon, seul le bouton ⓘ ouvre l'infobulle. */
