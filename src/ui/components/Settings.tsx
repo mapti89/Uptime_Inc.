@@ -4,6 +4,8 @@ import { offlineCap, offlineEfficiency } from '../../game/engine/offline';
 import { duration, pct } from '../format';
 import { decodeTransfer, transferLink } from '../../game/engine/save';
 import { useUi } from '../uiStore';
+import { SyncPanel } from './SyncPanel';
+import { useSync } from '../../game/sync/sync';
 
 export function Settings() {
   const s = useGame((g) => g.state);
@@ -16,6 +18,7 @@ export function Settings() {
   const propose = useUi((u) => u.proposeImport);
   const fileInput = useRef<HTMLInputElement>(null);
   const canShare = typeof navigator.share === 'function';
+  const synced = useSync((x) => x.user !== null);
 
   const tryImport = async (raw: string) => {
     try {
@@ -79,6 +82,7 @@ export function Settings() {
 
   return (
     <div className="settings">
+      <SyncPanel />
       <div className="panel inner">
         <h3>💾 Sauvegarde</h3>
         <p className="muted small">
@@ -147,7 +151,9 @@ export function Settings() {
           </button>
         ) : (
           <div className="row">
-            <span className="warn">Tout sera perdu, y compris le prestige. Sûr ?</span>
+            <span className="warn">
+              Tout sera perdu, y compris le prestige{synced ? ' et la sauvegarde en ligne' : ''}. Sûr ?
+            </span>
             <button
               className="btn danger"
               onClick={() => {

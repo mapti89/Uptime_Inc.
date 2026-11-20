@@ -18,6 +18,7 @@ import { OfflineModal } from './ui/components/OfflineModal';
 import { EraTransition } from './ui/components/EraTransition';
 import { Victory } from './ui/components/Victory';
 import { ImportConfirm } from './ui/components/ImportConfirm';
+import { SyncConflict } from './ui/components/SyncConflict';
 import { EVENT_BY_ID } from './game/data/events';
 import { useGame } from './game/store';
 import { UPGRADES } from './game/data/upgrades';
@@ -287,6 +288,7 @@ export default function App() {
       <EraTransition />
       <Victory />
       <ImportConfirm />
+      <SyncConflict />
     </div>
   );
 }

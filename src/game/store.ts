@@ -8,6 +8,7 @@ import { newGame } from './engine/state';
 import { simulateOffline, type OfflineReport } from './engine/offline';
 import { GALAXY_STARS } from './data/galaxy';
 import { clearStorage, encodeTransfer, loadFromStorage, saveToStorage } from './engine/save';
+import { markDirty } from './sync/meta';
 
 export interface Toast {
   id: number;
@@ -50,6 +51,8 @@ interface Store {
   exportSave: () => Promise<string>;
   /** Remplace la partie en cours (après confirmation côté interface). */
   loadState: (s: GameState) => void;
+  /** Reprend la partie d'un autre appareil (synchronisation), avec la progression hors-ligne depuis. */
+  adoptState: (s: GameState) => void;
   hardReset: () => void;
 }
 
@@ -60,6 +63,12 @@ function derive(state: GameState) {
   const mods = computeModifiers(state);
   const snap = computeSnapshot(state, mods);
   return { mods, snap };
+}
+
+/** Action du joueur : comme `mutate`, et signale à la synchronisation que la partie a été jouée ici. */
+function act(get: () => Store, set: (p: Partial<Store>) => void, fn: (s: GameState) => unknown) {
+  markDirty();
+  mutate(get, set, fn);
 }
 
 /** Applique une mutation sur une copie de l'état et republie. */
@@ -126,7 +135,7 @@ export const useGame = create<Store>((set, get) => ({
 
   click: (x, y) => {
     let gained = 0;
-    mutate(get, set, (s) => {
+    act(get, set, (s) => {
       gained = A.click(s);
     });
     if (x !== undefined && y !== undefined) {
@@ -135,28 +144,29 @@ export const useGame = create<Store>((set, get) => ({
       setTimeout(() => set({ floaters: get().floaters.filter((o) => o.id !== f.id) }), 900);
     }
   },
-  buy: (id) => mutate(get, set, (s) => A.buyBuilding(s, id, s.settings.buyAmount)),
-  buyUpgrade: (id) => mutate(get, set, (s) => A.buyUpgrade(s, id)),
-  buyAllUpgrades: () => mutate(get, set, (s) => A.buyAllUpgrades(s)),
-  buyResearch: (id) => mutate(get, set, (s) => A.buyResearch(s, id)),
+  buy: (id) => act(get, set, (s) => A.buyBuilding(s, id, s.settings.buyAmount)),
+  buyUpgrade: (id) => act(get, set, (s) => A.buyUpgrade(s, id)),
+  buyAllUpgrades: () => act(get, set, (s) => A.buyAllUpgrades(s)),
+  buyResearch: (id) => act(get, set, (s) => A.buyResearch(s, id)),
   moveEra: () => {
     let moved = false;
-    mutate(get, set, (s) => {
+    act(get, set, (s) => {
       moved = A.moveEra(s);
     });
     if (moved) set({ eraTransition: get().state.era });
   },
-  fixEvent: (uid) => mutate(get, set, (s) => A.fixEvent(s, uid)),
-  repairNow: () => mutate(get, set, (s) => A.repairNow(s)),
+  fixEvent: (uid) => act(get, set, (s) => A.fixEvent(s, uid)),
+  repairNow: () => act(get, set, (s) => A.repairNow(s)),
   prestige: () => {
     const ns = A.doPrestige(structuredClone(get().state));
     if (!ns) return;
+    markDirty();
     saveToStorage(ns);
     set({ state: ns, ...derive(ns), toasts: [] });
   },
-  buyPrestige: (id) => mutate(get, set, (s) => A.buyPrestigeShop(s, id)),
+  buyPrestige: (id) => act(get, set, (s) => A.buyPrestigeShop(s, id)),
   setBuyAmount: (a) => mutate(get, set, (s) => (s.settings.buyAmount = a)),
-  toggleAutoUpgrades: () => mutate(get, set, (s) => (s.settings.autoUpgrades = !s.settings.autoUpgrades)),
+  toggleAutoUpgrades: () => act(get, set, (s) => (s.settings.autoUpgrades = !s.settings.autoUpgrades)),
   dismissOffline: () => set({ offline: null }),
   dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
   dismissEraTransition: () => set({ eraTransition: null }),
@@ -168,10 +178,18 @@ export const useGame = create<Store>((set, get) => ({
   },
   exportSave: () => encodeTransfer(get().state),
   loadState: (s) => {
+    markDirty();
     saveToStorage(s);
     set({ state: s, ...derive(s), toasts: [], offline: null });
   },
+  adoptState: (s) => {
+    const away = (Date.now() - s.lastSaved) / 1000;
+    const offline = away > 60 ? simulateOffline(s, away) : null;
+    saveToStorage(s);
+    set({ state: s, ...derive(s), toasts: [], offline });
+  },
   hardReset: () => {
+    markDirty();
     clearStorage();
     const s = newGame();
     saveToStorage(s);

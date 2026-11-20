@@ -6,7 +6,7 @@ import type { GameState } from '../../game/types';
 import { duration, money } from '../format';
 import { useUi } from '../uiStore';
 
-function Summary({ title, s }: { title: string; s: GameState }) {
+export function Summary({ title, s }: { title: string; s: GameState }) {
   const era = eraDef(s.era);
   return (
     <div className="import-card">

@@ -25,6 +25,7 @@ Options du simulateur : `--hours 14 --clicks 2 --stop --verbose --prestiges 1 --
 - **Améliorations** (paliers à 10/25/50/100… exemplaires, ×2 ; électricité et refroidissement : paliers au record de consommation / de chaleur évacuée), **recherche** (5 branches), **équipe**, **incidents** aléatoires (pannes, canicules, DDoS, buzz…), **succès** (+1 % de revenus chacun).
 - **Introduction en bourse** (prestige, dès l'ère 4) : actions = 3 × ∛(gains / 1 Md), +2 % de revenus par action, boutique d'actionnaires.
 - Sauvegarde automatique (localStorage), export/import, progression hors-ligne (2 h à 50 % par défaut).
+- **Synchronisation en ligne** facultative (connexion Google, Firebase Auth + Firestore `saves/{uid}`) : `src/game/sync/`. Le SDK Firebase n'est chargé qu'à la connexion.
 
 ## Architecture
 
