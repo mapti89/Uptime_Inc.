@@ -1,8 +1,14 @@
 /**
  * Simulation headless d'une partie par un bot glouton, pour l'équilibrage.
  * Usage : npm run sim -- [--hours 30] [--clicks 0] [--seed 1] [--verbose]
+ *   --dump-era N   enregistre la partie en arrivant à l'ère N (sim-eraN.json, préfixe SIM_DUMP)
+ *   --load FICHIER repart d'une partie enregistrée (pour tester un réglage de fin de partie)
+ *   --threshold 10=5e24,11=…   remplace le seuil (et le coût de déménagement, au même ratio) d'ères
+ *   --research 9=8e9,10=4e10   remplace le coût des recherches d'ères
+ *   --bridge 10=0.5            remplace le pont de latence de base d'ères
+ *   --label NOM                préfixe des lignes de résultat (pour comparer des variantes)
  */
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { BUILDINGS } from '../src/game/data/buildings';
 import { ERAS } from '../src/game/data/eras';
 import { RESEARCH } from '../src/game/data/research';
@@ -14,6 +20,7 @@ import {
 import { computeModifiers } from '../src/game/engine/modifiers';
 import { computeSnapshot } from '../src/game/engine/snapshot';
 import { newGame } from '../src/game/engine/state';
+import { deserialize } from '../src/game/engine/save';
 import { tick } from '../src/game/engine/tick';
 import type { GameState } from '../src/game/types';
 
@@ -25,6 +32,19 @@ const arg = (name: string, def: number) => {
 const HOURS = arg('hours', 30);
 const CLICKS = arg('clicks', 0); // clics/s pendant les 10 premières minutes
 const PRESTIGES = arg('prestiges', 0);
+const DUMP_ERA = arg('dump-era', 0);
+const LOAD = args.includes('--load') ? args[args.indexOf('--load') + 1] : null;
+const strArg = (name: string) => (args.includes(`--${name}`) ? args[args.indexOf(`--${name}`) + 1] : null);
+const pairs = (v: string | null) => (v ? v.split(',').map((kv) => kv.split('=').map(Number) as [number, number]) : []);
+// Réglages expérimentaux, appliqués en mémoire aux données du jeu.
+for (const [era, threshold] of pairs(strArg('threshold'))) {
+  const e = ERAS[era - 1];
+  e.moveCost *= threshold / e.threshold;
+  e.threshold = threshold;
+}
+for (const [era, cost] of pairs(strArg('research'))) for (const r of RESEARCH) if (r.era === era) r.cost = cost;
+for (const [era, bridge] of pairs(strArg('bridge'))) ERAS[era - 1].latencyBridge = bridge;
+const LABEL = strArg('label') ?? 'run1';
 const VERBOSE = args.includes('--verbose');
 let seed = arg('seed', 1);
 const rng = () => {
@@ -156,7 +176,8 @@ function evaluate(s: GameState): Candidate[] {
 }
 
 function runOnce(s: GameState, label: string) {
-  const eraTimes: number[] = [0];
+  const eraTimes: number[] = [];
+  eraTimes[s.era - 1] = 0;
   let lastBuy = 0;
   let longestGap = 0;
   let longestGapAt = 0;
@@ -181,6 +202,11 @@ function runOnce(s: GameState, label: string) {
       console.log(`[${label}] ${fmt(t)}  → Ère ${s.era} (${ERAS[s.era - 1].name})  net=${fmtN(netOf(s))}$/s`);
       lastBuy = t;
       if (VERBOSE) console.log('   owned: ' + Object.entries(s.owned).filter(([, n]) => n > 0).map(([k, n]) => `${k}:${n}`).join(' '));
+      if (DUMP_ERA && s.era === DUMP_ERA) {
+        const file = `${process.env.SIM_DUMP ?? 'sim'}-era${DUMP_ERA}.json`;
+        writeFileSync(file, JSON.stringify(s));
+        console.log(`   partie enregistrée : ${file}`);
+      }
     }
     if (s.era >= ERAS.length && (PRESTIGES > 0 || args.includes("--stop")) && t > eraTimes[ERAS.length - 1] + 1800) break;
 
@@ -237,8 +263,8 @@ function runOnce(s: GameState, label: string) {
   return s;
 }
 
-let s = newGame();
-s = runOnce(s, 'run1');
+let s = LOAD ? deserialize(readFileSync(LOAD, 'utf8')) : newGame();
+s = runOnce(s, LABEL);
 for (let p = 0; p < PRESTIGES; p++) {
   const gain = prestigeGain(s);
   const ns = doPrestige(s);

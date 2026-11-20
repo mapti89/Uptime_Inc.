@@ -12,7 +12,8 @@ npm test           # tests du moteur (vitest)
 npm run sim        # simulation d'équilibrage par un bot glouton
 ```
 
-Options du simulateur : `--hours 14 --clicks 2 --stop --verbose --prestiges 1 --trace`.
+Options du simulateur : `--hours 14 --clicks 2 --stop --verbose --prestiges 1 --trace --seed 2`.
+Pour l'équilibrage de fin de partie : `--dump-era 8` enregistre la partie en arrivant à une ère, `--load sim-era8.json` en repart, et `--threshold 10=5e24`, `--research 9=8e9`, `--bridge 10=0.25` testent un réglage sans modifier les données (plusieurs variantes peuvent tourner en parallèle).
 
 ## Principe
 
@@ -34,4 +35,4 @@ Options du simulateur : `--hours 14 --clicks 2 --stop --verbose --prestiges 1 --
 - `src/game/engine/` — moteur pur sans React : `snapshot.ts` (capacité, goulots, revenus), `tick.ts`, `actions.ts`, `events.ts`, `offline.ts`, `save.ts`.
 - `src/game/store.ts` (zustand) et `src/game/loop.ts` (tick 100 ms, autosave 15 s).
 - `src/ui/` — composants React et thème CSS.
-- `scripts/simulate.ts` — bot d'équilibrage ; rythme mesuré (bot optimal) : ère 2 ≈ 9 min, ère 3 ≈ 50 min, ère 4 ≈ 1 h 55, ère 5 ≈ 3 h 25, ère 6 ≈ 6 h ; une 2e partie après prestige est ~4× plus rapide.
+- `scripts/simulate.ts` — bot d'équilibrage ; rythme mesuré (bot optimal, sans prestige) : ère 2 ≈ 18 min, ère 4 ≈ 2 h, ère 6 ≈ 5 h, ère 7 ≈ 8 h, ère 8 ≈ 10 h 30, ère 9 ≈ 16 h, ère 10 ≈ 23 h 30, ère 11 ≈ 32 h, ère 12 ≈ 39 h 30 ; une 2e partie après prestige est ~4× plus rapide.
