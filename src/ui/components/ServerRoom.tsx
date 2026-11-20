@@ -255,6 +255,8 @@ export function ServerRoom({ compact = false }: { compact?: boolean } = {}) {
         className={classes}
         style={{ '--blink': `${0.35 + (1 - load) * 1.4}s` } as CSSProperties}
         onClick={onClick}
+        // Appui long sur mobile : pas de menu « Télécharger l'image » sur le décor.
+        onContextMenu={(e) => e.preventDefault()}
         title="Cliquez pour traiter des requêtes à la main"
       >
         <svg className="scene-svg" viewBox={`0 0 ${SCENE_W} ${SCENE_H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">

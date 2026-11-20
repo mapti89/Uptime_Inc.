@@ -23,7 +23,7 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="brand">
-        <img className="logo" src={`${import.meta.env.BASE_URL}assets/brand/logo.webp`} alt="" width={40} height={40} />
+        <img className="logo" draggable={false} src={`${import.meta.env.BASE_URL}assets/brand/logo.webp`} alt="" width={40} height={40} />
         <div>
           <div className="brand-name">Uptime Inc.</div>
           <div className="brand-era">
