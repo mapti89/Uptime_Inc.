@@ -30,10 +30,28 @@ export function freeSlots(slotsCap: number, slotsUsed: number): number {
   return Math.max(0, Math.floor(slotsCap - slotsUsed + 1e-9));
 }
 
-/** Combien d'unités on peut physiquement installer (contrainte d'espace / max). */
-export function placeable(b: BuildingDef, s: GameState, free: number): number {
+/**
+ * Plafond d'exemplaires d'un bâtiment dans l'ère `era` (Infinity s'il n'en a pas).
+ * Il augmente d'ère en ère : tout monter au max donne une infrastructure juste
+ * suffisante pour l'ère (voir scripts/solveCaps.ts).
+ */
+export function buildingCap(b: BuildingDef, era: number): number {
+  let cap = b.max ?? Infinity;
+  const t = b.maxByEra;
+  if (t?.length) {
+    const i = era - b.era;
+    cap = Math.min(cap, i < 0 ? 0 : t[Math.min(i, t.length - 1)]);
+  }
+  return cap;
+}
+
+/**
+ * Combien d'unités on peut physiquement installer (contrainte d'espace / plafond).
+ * `owned` : exemplaires possédés et en route.
+ */
+export function placeable(b: BuildingDef, s: GameState, free: number, owned = s.owned[b.id] ?? 0): number {
   let n = Infinity;
   if (b.slots > 0) n = Math.floor(free / b.slots);
-  if (b.max !== undefined) n = Math.min(n, b.max - (s.owned[b.id] ?? 0));
+  n = Math.min(n, buildingCap(b, s.era) - owned);
   return Math.max(0, n);
 }

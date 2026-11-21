@@ -2,6 +2,9 @@ import type { GameState } from '../types';
 import { SAVE_VERSION, newGame } from './state';
 import { ACHIEVEMENT_BY_ID } from '../data/achievements';
 import { legacyTierCost } from '../data/upgrades';
+import { BUILDINGS, scaledKey } from '../data/buildings';
+import { buildingCap, bulkCost } from './formulas';
+import { addLog } from './state';
 
 export const SAVE_KEY = 'uptime-inc-save';
 
@@ -26,6 +29,30 @@ const MIGRATIONS: Record<number, Migration> = {
     }
     const money = typeof raw.money === 'number' ? raw.money : 0;
     return { ...raw, achievements: ach, upgrades, money: money + refund };
+  },
+  // v3 → v4 : plafonds par ère et production recalibrée des équipements d'appui. Ceux-ci
+  // (stockage, réseau, électricité, refroidissement, espace, emport, nettoyage) sont montés
+  // au maximum de l'ère, pour que l'infrastructure existante reste viable ; le reste est
+  // ramené au plafond au chargement (clampToCaps).
+  3: (raw) => {
+    const era = typeof raw.era === 'number' ? raw.era : 1;
+    const owned = { ...((raw.owned as Record<string, number>) ?? {}) };
+    let refund = 0;
+    for (const b of BUILDINGS) {
+      const key = scaledKey(b);
+      if (!key || key === 'traffic' || b.era > era) continue;
+      const cap = buildingCap(b, era);
+      const n = owned[b.id] ?? 0;
+      if (n > cap) refund += bulkCost(b, cap, n - cap);
+      owned[b.id] = cap;
+    }
+    const money = typeof raw.money === 'number' ? raw.money : 0;
+    // Tutoriel (nouveau) : une partie déjà commencée ne le revoit pas, il reste accessible dans l'aide.
+    const settings = { ...((raw.settings as Record<string, unknown>) ?? {}) };
+    const tutoSeen: Record<string, true> = { intro: true };
+    for (let e = 2; e <= era; e++) tutoSeen[`era-${e}`] = true;
+    settings.tutoSeen = tutoSeen;
+    return { ...raw, owned, money: money + refund, settings, rebalanced: true };
   },
 };
 
@@ -64,7 +91,48 @@ export function deserialize(json: string): GameState {
   if (!isFinite(s.money) || s.money < 0) s.money = 0;
   if (!Array.isArray(s.events)) s.events = [];
   if (!Array.isArray(s.log)) s.log = [];
+  clampToCaps(s);
+  if ((s as GameState & { rebalanced?: boolean }).rebalanced) {
+    delete (s as GameState & { rebalanced?: boolean }).rebalanced;
+    addLog(s, '⚖️ Rééquilibrage : électricité, refroidissement, espace, stockage, réseau et spatial montés au maximum de l’ère.', 'good');
+  }
   return s;
+}
+
+/**
+ * Ramène chaque bâtiment au plafond de l'ère (parties antérieures aux plafonds, ou après
+ * un rééquilibrage) : l'excédent est revendu au prix payé pour ces exemplaires.
+ */
+export function clampToCaps(s: GameState): number {
+  if (!Array.isArray(s.transit)) s.transit = [];
+  let refund = 0;
+  let removed = 0;
+  for (const b of BUILDINGS) {
+    const cap = buildingCap(b, s.era);
+    if (!isFinite(cap)) continue;
+    const owned = s.owned[b.id] ?? 0;
+    const moving = s.transit.filter((t) => t.id === b.id).reduce((n, t) => n + t.count, 0);
+    let excess = owned + moving - cap;
+    if (excess <= 0) continue;
+    refund += bulkCost(b, cap, excess);
+    removed += excess;
+    const fromOwned = Math.min(owned, excess);
+    s.owned[b.id] = owned - fromOwned;
+    excess -= fromOwned;
+    for (const t of s.transit) {
+      if (excess <= 0) break;
+      if (t.id !== b.id) continue;
+      const k = Math.min(t.count, excess);
+      t.count -= k;
+      excess -= k;
+    }
+  }
+  s.transit = s.transit.filter((t) => t.count > 0);
+  if (removed > 0) {
+    s.money += refund;
+    addLog(s, `⚖️ Nouveaux plafonds par ère : ${removed} équipements en trop revendus au prix payé.`, 'info');
+  }
+  return refund;
 }
 
 export function serialize(s: GameState): string {

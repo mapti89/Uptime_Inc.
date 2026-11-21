@@ -3,6 +3,7 @@ import { useGame } from '../../game/store';
 import { UPGRADES } from '../../game/data/upgrades';
 import { BUILDING_BY_ID } from '../../game/data/buildings';
 import { reqMissing, upgradeAvailable } from '../../game/engine/actions';
+import { buildingCap } from '../../game/engine/formulas';
 import type { GameState, UpgradeReq } from '../../game/types';
 import { money, watts } from '../format';
 
@@ -24,7 +25,9 @@ export function UpgradesGrid() {
   const available = UPGRADES.filter((u) => upgradeAvailable(s, u.id)).sort((a, b) => a.cost - b.cost);
   const owned = UPGRADES.filter((u) => s.upgrades[u.id]);
   const affordable = available.filter((u) => u.cost * costMult <= s.money).length;
-  const next = UPGRADES.filter((u) => !s.upgrades[u.id] && !upgradeAvailable(s, u.id) && u.era <= s.era && u.req)
+  // Paliers atteignables dans l'ère : ceux qui dépassent le plafond du bâtiment attendent une ère suivante.
+  const reachable = (req: UpgradeReq) => !('id' in req) || req.count <= buildingCap(BUILDING_BY_ID[req.id], s.era);
+  const next = UPGRADES.filter((u) => !s.upgrades[u.id] && !upgradeAvailable(s, u.id) && u.era <= s.era && u.req && reachable(u.req))
     .map((u) => ({ u, missing: reqMissing(s, u.req!) }))
     .filter((x) => x.missing > 0)
     .sort((a, b) => a.u.cost - b.u.cost)

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useGame } from '../../game/store';
 import { RESOURCES, type Category, type Provides, type Res } from '../../game/types';
-import { CATEGORIES } from '../../game/data/buildings';
+import { BUILDINGS, CATEGORIES, LAUNCH_DEBRIS } from '../../game/data/buildings';
+import { buildingCap } from '../../game/engine/formulas';
 import { REQUEST_TYPES } from '../../game/data/requestTypes';
 import { useUi } from '../uiStore';
 import { RES_LABEL, fmt, mass, pct, resValue, watts } from '../format';
@@ -165,6 +166,13 @@ function ResourceTip({ r }: { r: Res }) {
                 = proche {resValue(r, snap.supply[r] - far)} + lointain {resValue(r, far * snap.latencyBridge)}
               </span>
             </dd>
+            <dt>🐢 Tolérant</dt>
+            <dd>
+              {resValue(r, snap.need[r] - snap.needRealtime[r])} /{' '}
+              {resValue(r, far * (1 - snap.latencyBridge) + Math.max(0, snap.realtimeCap[r] - snap.needRealtime[r]))}
+              <br />
+              <span className="muted">= lointain réservé + ce que le ⚡ laisse libre du partagé</span>
+            </dd>
             <dt>🐢 Matériel lointain</dt>
             <dd>
               {resValue(r, far)}, dont {resValue(r, far * snap.latencyBridge)} ({bridge} %) utilisables aussi par le ⚡ temps réel
@@ -204,7 +212,25 @@ function ResourceTip({ r }: { r: Res }) {
   );
 }
 
-function SimpleTip({ title, value, children }: { title: string; value: string; children: ReactNode }) {
+/** Tous les équipements qui fournissent `key` sont-ils au maximum de l'ère ? */
+function useAllMaxed(key: keyof Provides): boolean {
+  const s = useGame((g) => g.state);
+  const list = BUILDINGS.filter((b) => b.era <= s.era && b.provides[key]);
+  return list.length > 0 && list.every((b) => (s.owned[b.id] ?? 0) >= buildingCap(b, s.era));
+}
+
+/** Conseil affiché quand une jauge déborde alors que tout son matériel est au maximum. */
+function MaxedHint({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <p className="infotip-alert">
+      Tous les équipements de ce type sont au maximum de l’ère : cherchez une amélioration ou une recherche qui augmente
+      cette capacité (ou réduit le besoin), sinon l’ère suivante relèvera les plafonds.
+    </p>
+  );
+}
+
+function SimpleTip({ title, value, children, hint }: { title: string; value: string; children: ReactNode; hint?: ReactNode }) {
   return (
     <>
       <h4>{title}</h4>
@@ -213,6 +239,7 @@ function SimpleTip({ title, value, children }: { title: string; value: string; c
         <dd>{value}</dd>
       </dl>
       <p className="muted">{children}</p>
+      {hint}
     </>
   );
 }
@@ -221,6 +248,13 @@ export function ResourceGauges() {
   const snap = useGame((g) => g.snap);
   const era = useGame((g) => g.state.era);
   const stars = useGame((g) => g.state.stars);
+  const maxed = {
+    power: useAllMaxed('power'),
+    cooling: useAllMaxed('cooling'),
+    space: useAllMaxed('space'),
+    lift: useAllMaxed('lift'),
+    cleanup: useAllMaxed('cleanup'),
+  };
   return (
     <div className="panel gauges">
       <h3>📟 Ressources</h3>
@@ -229,32 +263,46 @@ export function ResourceGauges() {
         const far = snap.remoteSupply[r];
         let rows: Row[];
         if (far > 0) {
-          // Deux barres : le temps réel (proche + part pontée) et le tolérant (le reste du lointain,
-          // plus ce que le temps réel laisse du matériel partagé).
-          const needT = snap.need[r] - snap.needRealtime[r];
+          // Deux barres, chacune face à la capacité qui lui reste vraiment (même logique que le moteur) :
+          // - le tolérant prend d'abord le lointain réservé, puis déborde sur le partagé (proche + ponté) ;
+          // - le temps réel dispose du partagé, moins ce débordement.
+          // Une barre ne passe au rouge que si des requêtes de sa catégorie sont réellement perdues.
+          const needI = snap.needRealtime[r];
+          const needT = snap.need[r] - needI;
           const bridged = far * snap.latencyBridge;
           const near = snap.supply[r] - far;
           const reserved = far - bridged;
+          const shared = snap.realtimeCap[r];
+          const overflowT = Math.max(0, needT - reserved);
+          const capI = Math.max(0, shared - overflowT);
+          const spareShared = Math.max(0, shared - needI);
+          const capT = reserved + spareShared;
           const bridgePct = Math.round(snap.latencyBridge * 100);
           rows = [
             {
               label: '⚡ Temps réel',
-              used: snap.needRealtime[r],
-              cap: snap.realtimeCap[r],
-              near,
-              text: `${resValue(r, snap.needRealtime[r])} / ${resValue(r, snap.realtimeCap[r])}`,
+              used: needI,
+              cap: capI,
+              near: Math.min(near, capI),
+              text: `${resValue(r, needI)} / ${resValue(r, capI)}`,
               legend: (
                 <>
                   <i className="swatch" /> proche {resValue(r, near)} · <i className="swatch bridged" /> lointain {bridgePct} %{' '}
                   {resValue(r, bridged)}
+                  {overflowT > 0 && <> · − {resValue(r, Math.min(overflowT, shared))} pris par le 🐢</>}
                 </>
               ),
             },
             {
-              label: `🐢 Tolérant seul (${100 - bridgePct} %)`,
+              label: '🐢 Tolérant',
               used: needT,
-              cap: reserved,
-              text: `${resValue(r, needT)} / ${resValue(r, reserved)}`,
+              cap: capT,
+              text: `${resValue(r, needT)} / ${resValue(r, capT)}`,
+              legend: (
+                <>
+                  lointain réservé {resValue(r, reserved)} + partagé libre {resValue(r, spareShared)}
+                </>
+              ),
             },
           ];
         } else {
@@ -267,7 +315,7 @@ export function ResourceGauges() {
         label="⚡ Électricité"
         rows={[{ label: '', used: snap.totalWatts, cap: snap.powerCap, text: `${watts(snap.totalWatts)} / ${watts(snap.powerCap)}` }]}
         tip={
-          <SimpleTip title="⚡ Électricité" value={`${watts(snap.totalWatts)} / ${watts(snap.powerCap)}`}>
+          <SimpleTip title="⚡ Électricité" value={`${watts(snap.totalWatts)} / ${watts(snap.powerCap)}`} hint={<MaxedHint show={snap.totalWatts > snap.powerCap && maxed.power} />}>
             Consommation des machines × PUE ({snap.pue.toFixed(2)}) face à la capacité électrique. Au-delà, toutes les machines ralentissent
             d’autant{snap.powerFactor < 1 ? ` : actuellement ${pct(snap.powerFactor, 0)} de puissance` : ''}.
           </SimpleTip>
@@ -278,7 +326,7 @@ export function ResourceGauges() {
         label="❄️ Chaleur"
         rows={[{ label: '', used: snap.heat, cap: snap.coolCap, text: `${watts(snap.heat)} / ${watts(snap.coolCap)}` }]}
         tip={
-          <SimpleTip title="❄️ Chaleur" value={`${watts(snap.heat)} / ${watts(snap.coolCap)}`}>
+          <SimpleTip title="❄️ Chaleur" value={`${watts(snap.heat)} / ${watts(snap.coolCap)}`} hint={<MaxedHint show={snap.heat > snap.coolCap && maxed.cooling} />}>
             Chaleur dégagée par les machines face à la capacité de refroidissement. Au-delà, surchauffe : les machines brident leurs
             performances{snap.coolFactor < 1 ? ` (actuellement ${pct(snap.coolFactor, 0)})` : ''}. Le refroidissement pèse aussi sur le PUE.
           </SimpleTip>
@@ -289,7 +337,7 @@ export function ResourceGauges() {
         label="📐 Espace"
         rows={[{ label: '', used: snap.slotsUsed, cap: snap.slotsCap, text: `${fmt(snap.slotsUsed)} / ${fmt(snap.slotsCap)} U` }]}
         tip={
-          <SimpleTip title="📐 Espace" value={`${fmt(snap.slotsUsed)} / ${fmt(snap.slotsCap)} U`}>
+          <SimpleTip title="📐 Espace" value={`${fmt(snap.slotsUsed)} / ${fmt(snap.slotsCap)} U`} hint={<MaxedHint show={snap.slotsCap - snap.slotsUsed < 1 && maxed.space} />}>
             Emplacements de baie occupés. Quand c’est plein, on ne peut plus installer de machines : achetez des baies, des salles…
           </SimpleTip>
         }
@@ -300,7 +348,7 @@ export function ResourceGauges() {
           label="🚀 Emport"
           rows={[{ label: '', used: snap.massUsed, cap: snap.liftCap, text: `${mass(snap.massUsed)} / ${mass(snap.liftCap)}` }]}
           tip={
-            <SimpleTip title="🚀 Emport" value={`${mass(snap.massUsed)} / ${mass(snap.liftCap)}`}>
+            <SimpleTip title="🚀 Emport" value={`${mass(snap.massUsed)} / ${mass(snap.liftCap)}`} hint={<MaxedHint show={snap.massUsed >= snap.liftCap * 0.98 && maxed.lift} />}>
               Masse du matériel spatial (en service ou en route) face à la capacité de vos lanceurs. Sans emport libre, impossible
               d’envoyer plus de matériel.
             </SimpleTip>
@@ -313,10 +361,36 @@ export function ResourceGauges() {
           label="🛰️ Débris orbitaux"
           rows={[{ label: '', used: snap.debris, cap: snap.cleanupCap, text: `${mass(snap.debris)} / ${mass(snap.cleanupCap)}` }]}
           tip={
-            <SimpleTip title="🛰️ Débris orbitaux" value={`${mass(snap.debris)} / ${mass(snap.cleanupCap)}`}>
-              Débris générés par vos satellites face à votre capacité de nettoyage. Au-delà, les collisions dégradent tout le parc
-              {snap.debrisFactor < 1 ? ` (actuellement ${pct(snap.debrisFactor, 0)} d’efficacité)` : ''}.
-            </SimpleTip>
+            <>
+              <h4>🛰️ Débris orbitaux</h4>
+              <dl className="infotip-kv">
+                <dt>Générés / nettoyage</dt>
+                <dd>
+                  {mass(snap.debris)} / {mass(snap.cleanupCap)}
+                </dd>
+                <dt>🛰️ Satellites</dt>
+                <dd>{mass(snap.debris - snap.launchDebris)}</dd>
+                {snap.launchDebris > 0 && (
+                  <>
+                    <dt>🚀 Lancements</dt>
+                    <dd>
+                      {mass(snap.launchDebris)}
+                      <br />
+                      <span className="muted">
+                        lanceurs sans fusée : {pct(snap.cleanLaunchShare, 0)} de l’emport → −{pct(snap.cleanLaunchShare * LAUNCH_DEBRIS.cleanCut, 0)}
+                      </span>
+                    </dd>
+                  </>
+                )}
+              </dl>
+              <p className="muted">
+                Les satellites en orbite basse produisent leurs propres débris ; tout autre matériel lancé (Lune, Mars, étoiles…) laisse
+                des étages et des fragments proportionnels à sa masse. Catapulte, ascenseur et voiles laser en suppriment l’essentiel.
+                Au-delà du nettoyage, les collisions dégradent tout le parc
+                {snap.debrisFactor < 1 ? ` (actuellement ${pct(snap.debrisFactor, 0)} d’efficacité)` : ''}.
+              </p>
+              <MaxedHint show={snap.debris >= snap.cleanupCap * 0.98 && maxed.cleanup} />
+            </>
           }
           go={['orbit', 'cleanup']}
         />

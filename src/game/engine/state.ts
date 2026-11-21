@@ -1,6 +1,6 @@
 import type { GameState, LogEntry } from '../types';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export function newGame(prev?: GameState['prestige']): GameState {
   const prestige = prev
@@ -40,7 +40,7 @@ export function newGame(prev?: GameState['prestige']): GameState {
       runPeakHeat: 0,
     },
     prestige,
-    settings: { buyAmount: 1, autoUpgrades: false },
+    settings: { buyAmount: 1, autoUpgrades: false, tutorial: true, tutoSeen: {} },
     lastSaved: Date.now(),
     transit: [],
     stars: 0,

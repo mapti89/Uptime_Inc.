@@ -1,6 +1,6 @@
 import type { EventEffects, GameState, Res, Snapshot } from '../types';
 import { RESOURCES } from '../types';
-import { BUILDINGS, BUILDING_BY_ID } from '../data/buildings';
+import { BUILDINGS, BUILDING_BY_ID, LAUNCH_DEBRIS } from '../data/buildings';
 import { eraDef } from '../data/eras';
 import { REQUEST_TYPES } from '../data/requestTypes';
 import { effectiveProvides, type Modifiers } from './modifiers';
@@ -88,6 +88,8 @@ export function computeSnapshot(s: GameState, m: Modifiers): Snapshot {
   let cleanupCap = era.base.cleanup ?? 0;
   let massUsed = 0;
   let debris = 0;
+  let launchMass = 0;
+  let cleanLift = 0;
   let replication = 0;
   let powerCap = era.base.power;
   let coolCap = era.base.cooling;
@@ -136,11 +138,22 @@ export function computeSnapshot(s: GameState, m: Modifiers): Snapshot {
     if (p.replication) replication += n * p.replication * mult;
     if (b.mass) massUsed += n * b.mass;
     if (b.debris) debris += n * b.debris;
+    else if (b.mass) launchMass += n * b.mass;
+    if (p.lift && b.flags?.includes('cleanLaunch')) cleanLift += n * p.lift * mult;
     itWatts += n * b.watts;
     slotsUsed += n * b.slots;
   }
   // Le matériel en route réserve déjà sa place dans les lanceurs.
-  for (const tr of s.transit) massUsed += tr.count * (BUILDING_BY_ID[tr.id]?.mass ?? 0);
+  for (const tr of s.transit) {
+    const def = BUILDING_BY_ID[tr.id];
+    const mass = tr.count * (def?.mass ?? 0);
+    massUsed += mass;
+    if (!def?.debris) launchMass += mass;
+  }
+  // Débris de lancement, réduits par la part d'emport assurée sans fusée.
+  const cleanShare = liftCap > 0 ? Math.min(1, cleanLift / liftCap) : 0;
+  const launchDebris = launchMass * LAUNCH_DEBRIS.perTonne * (1 - LAUNCH_DEBRIS.cleanCut * cleanShare);
+  debris += launchDebris;
   massUsed *= m.mass;
   debris *= m.mass;
   liftCap *= m.stat.lift;
@@ -289,7 +302,7 @@ export function computeSnapshot(s: GameState, m: Modifiers): Snapshot {
     totalDemand, totalServed, revenue, elecCost, net,
     itWatts, totalWatts, powerCap, heat, coolCap, heatDissipated, pue,
     powerFactor, coolFactor, efficiency,
-    slotsUsed, slotsCap, massUsed, liftCap, debris, cleanupCap, debrisFactor,
+    slotsUsed, slotsCap, massUsed, liftCap, debris, launchDebris: launchDebris * m.mass, cleanLaunchShare: cleanShare, cleanupCap, debrisFactor,
     remoteSupply: far, needRealtime, realtimeCap, latencyBridge: bridge, replication, starMult, traffic, rdRate, autoClick, clickValue, autoClickValue, consumedW, energyShare,
     repairRate,
     slaMult, globalMult,

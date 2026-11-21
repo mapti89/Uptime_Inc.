@@ -1,10 +1,19 @@
-import type { BuildingDef, Category } from '../types';
+import type { BuildingDef, Category, Provides } from '../types';
+import { BALANCE } from './balance';
 
 // ---------------------------------------------------------------------------
 // Catalogue de tout ce qui s'achète en quantité (« bâtiments » d'idle game).
 // Coût de la n-ième unité : baseCost × growth^n.
 // Règle d'équilibrage des serveurs : coût ×10, production ×5 par palier.
 // ---------------------------------------------------------------------------
+
+/**
+ * Débris de lancement : tout matériel lancé depuis la Terre sans débris propre déclaré
+ * (Lune, Mars, étoiles…) laisse en orbite des étages et des fragments, proportionnellement
+ * à sa masse. Les lanceurs sans fusée (`cleanLaunch`) en suppriment l'essentiel, au prorata
+ * de leur part dans la capacité d'emport.
+ */
+export const LAUNCH_DEBRIS = { perTonne: 0.01, cleanCut: 0.75 };
 
 const SERVERS: BuildingDef[] = [
   {
@@ -718,7 +727,7 @@ const ORBIT: BuildingDef[] = [
   {
     id: 'massdriver', cat: 'orbit', name: 'Catapulte électromagnétique lunaire', icon: '🎯', era: 9,
     desc: 'Sans atmosphère, on lance le matériel depuis la Lune sur un simple rail.',
-    baseCost: 8e16, growth: 1.3, slots: 0, watts: 0,
+    baseCost: 8e16, growth: 1.3, slots: 0, watts: 0, flags: ['cleanLaunch'],
     provides: { lift: 400_000 },
   },
   {
@@ -728,9 +737,27 @@ const ORBIT: BuildingDef[] = [
     provides: { cleanup: 100_000 },
   },
   {
+    id: 'sweepers', cat: 'orbit', name: 'Balayeurs magnétiques autonomes', icon: '🧲', era: 10,
+    desc: 'Des milliers de petits drones qui ramassent les fragments métalliques et les renvoient vers l’atmosphère.',
+    baseCost: 2.5e19, growth: 1.25, slots: 0, watts: 0,
+    provides: { cleanup: 3e6 },
+  },
+  {
+    id: 'ednet', cat: 'orbit', name: 'Filet électrodynamique géant', icon: '🥅', era: 11,
+    desc: 'Un filet de mille kilomètres qui freine les débris par induction, sans carburant.',
+    baseCost: 3e21, growth: 1.25, slots: 0, watts: 0,
+    provides: { cleanup: 9e7 },
+  },
+  {
+    id: 'gravsweep', cat: 'orbit', name: 'Aspirateur gravitationnel', icon: '🕳️', era: 12,
+    desc: 'Un micro trou noir domestiqué en orbite haute : tout fragment qui passe trop près disparaît.',
+    baseCost: 1e24, growth: 1.25, slots: 0, watts: 0,
+    provides: { cleanup: 3e9 },
+  },
+  {
     id: 'elevator', cat: 'orbit', name: 'Ascenseur spatial', icon: '🛗', era: 9,
     desc: 'Un câble de 100 000 km jusqu’à l’orbite géostationnaire. Ça monte tout seul.',
-    baseCost: 1.6e18, growth: 1.3, slots: 0, watts: 0,
+    baseCost: 1.6e18, growth: 1.3, slots: 0, watts: 0, flags: ['cleanLaunch'],
     provides: { lift: 6e6 },
   },
   {
@@ -748,7 +775,7 @@ const ORBIT: BuildingDef[] = [
   {
     id: 'lasersail', cat: 'orbit', name: 'Voiles laser', icon: '⛵', era: 11,
     desc: 'Des voiles poussées par des lasers géants vers les étoiles voisines.',
-    baseCost: 6.4e20, growth: 1.3, slots: 0, watts: 0,
+    baseCost: 6.4e20, growth: 1.3, slots: 0, watts: 0, flags: ['cleanLaunch'],
     provides: { lift: 1.6e9 },
   },
   {
@@ -835,7 +862,8 @@ const STAFF: BuildingDef[] = [
  */
 export const ERA_COST_SCALE = [1, 1, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9];
 
-export const BUILDINGS: BuildingDef[] = [
+/** Bâtiments tels que définis ci-dessus (coûts par ère appliqués), avant équilibrage. */
+export const RAW_BUILDINGS: BuildingDef[] = [
   ...SERVERS,
   ...STORAGE,
   ...NETWORK,
@@ -846,6 +874,50 @@ export const BUILDINGS: BuildingDef[] = [
   ...STAFF,
   ...ORBIT,
 ].map((b) => ({ ...b, baseCost: b.baseCost * ERA_COST_SCALE[b.era - 1] }));
+
+/**
+ * Production principale d'un bâtiment d'appui, recalibrée par l'équilibrage
+ * (les serveurs et l'équipe gardent leurs valeurs : ils servent d'ancre).
+ */
+export function scaledKey(b: BuildingDef): keyof Provides | null {
+  switch (b.cat) {
+    case 'sales':
+      return 'traffic';
+    case 'storage':
+      return 'storage';
+    case 'network':
+      return 'bw';
+    case 'power':
+    case 'cooling':
+    case 'space':
+      return b.cat;
+    case 'orbit':
+      return b.provides.lift ? 'lift' : b.provides.cleanup ? 'cleanup' : null;
+    default:
+      return null;
+  }
+}
+
+/** Arrondi à deux chiffres significatifs, pour des valeurs lisibles. */
+export function round2(v: number): number {
+  if (v <= 0) return v;
+  const p = 10 ** (Math.floor(Math.log10(v)) - 1);
+  return Math.round(v / p) * p;
+}
+
+/** Applique plafond et production recalibrée (fichier balance.ts). */
+export function applyBalance(b: BuildingDef, bal: { max: number[]; scale?: number } | undefined): BuildingDef {
+  if (!bal) return { ...b, provides: { ...b.provides } };
+  const key = scaledKey(b);
+  const provides = { ...b.provides };
+  if (key && bal.scale !== undefined && provides[key]) provides[key] = round2(provides[key]! * bal.scale);
+  // Commercial : le prix suit la production, pour garder le même coût par requête/s.
+  // C'est le plafond qui borne la demande, pas la rentabilité des contrats.
+  const baseCost = b.cat === 'sales' && bal.scale !== undefined ? round2(b.baseCost * bal.scale) : b.baseCost;
+  return { ...b, baseCost, maxByEra: bal.max, provides };
+}
+
+export const BUILDINGS: BuildingDef[] = RAW_BUILDINGS.map((b) => applyBalance(b, BALANCE[b.id]));
 
 export const BUILDING_BY_ID: Record<string, BuildingDef> = Object.fromEntries(
   BUILDINGS.map((b) => [b.id, b]),

@@ -7,7 +7,7 @@ import { EVENT_BY_ID } from '../data/events';
 import { PRESTIGE_BY_ID, PRESTIGE_MIN_ERA, sharesFor } from '../data/prestige';
 import { computeModifiers, type Modifiers } from './modifiers';
 import { computeSnapshot } from './snapshot';
-import { bulkCost, costFactor, freeSlots, maxAffordable, placeable } from './formulas';
+import { buildingCap, bulkCost, costFactor, freeSlots, maxAffordable, placeable } from './formulas';
 import { addLog, newGame } from './state';
 import { STAR_ERA } from '../data/galaxy';
 
@@ -39,7 +39,7 @@ export function quoteBuilding(s: GameState, b: BuildingDef, amount: BuyAmount, m
   const f = costFactor(b, mods);
   if (b.era > s.era) return { count: 0, cost: bulkCost(b, owned, 1, f), blocked: 'era' };
   const snap = computeSnapshot(s, mods);
-  let room = placeable(b, s, freeSlots(snap.slotsCap, snap.slotsUsed));
+  let room = placeable(b, s, freeSlots(snap.slotsCap, snap.slotsUsed), owned);
   let liftBlocked = false;
   if (b.mass) {
     const fit = Math.floor((snap.liftCap - snap.massUsed) / (b.mass * mods.mass) + 1e-9);
@@ -49,7 +49,7 @@ export function quoteBuilding(s: GameState, b: BuildingDef, amount: BuyAmount, m
     }
   }
   if (room <= 0) {
-    const blocked = b.max !== undefined && owned >= b.max ? 'max' : liftBlocked ? 'lift' : 'space';
+    const blocked = owned >= buildingCap(b, s.era) ? 'max' : liftBlocked ? 'lift' : 'space';
     return { count: 0, cost: bulkCost(b, owned, 1, f), blocked };
   }
   if (amount === 'max') {

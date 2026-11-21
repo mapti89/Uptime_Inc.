@@ -30,7 +30,9 @@ export type Category =
   | 'staff'
   | 'orbit';
 
-export type Flag = 'ups' | 'generator' | 'antiddos' | 'solar' | 'raid' | 'wormhole';
+export type Flag = 'ups' | 'generator' | 'antiddos' | 'solar' | 'raid' | 'wormhole'
+  /** Lanceur sans fusée (rail, câble, voile) : il ne laisse pas d'étages ni de débris de lancement. */
+  | 'cleanLaunch';
 
 export interface Provides {
   cpu?: number; // vCPU
@@ -71,6 +73,11 @@ export interface BuildingDef {
   flags?: Flag[];
   /** Nombre max possédé (optionnel). */
   max?: number;
+  /**
+   * Plafond selon l'ère en cours (équilibrage) : indice 0 = ère d'apparition,
+   * au-delà du tableau la dernière valeur s'applique.
+   */
+  maxByEra?: number[];
   /** Masse lancée par unité (t) : consomme la capacité d'emport au lieu de l'espace. */
   mass?: number;
   /** Débris orbitaux générés par unité (t). */
@@ -260,6 +267,10 @@ export interface GameState {
   settings: {
     buyAmount: BuyAmount;
     autoUpgrades: boolean;
+    /** Tutoriel actif (désactivable à tout moment). */
+    tutorial: boolean;
+    /** Étapes du tutoriel déjà vues ou passées : « intro », « era-2 »… */
+    tutoSeen: Record<string, true>;
   };
   lastSaved: number;
   /** Équipements en route (voyage interstellaire). */
@@ -305,6 +316,9 @@ export interface Snapshot {
   liftCap: number;
   /** Débris orbitaux générés / capacité de nettoyage. */
   debris: number;
+  /** Part des débris venant des lancements (matériel sans débris propre), et part d'emport sans fusée. */
+  launchDebris: number;
+  cleanLaunchShare: number;
   cleanupCap: number;
   debrisFactor: number;
   /** Capacité servant uniquement les requêtes tolérantes (matériel lointain). */

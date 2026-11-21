@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../game/store';
-import { BUILDINGS, CATEGORIES } from '../../game/data/buildings';
+import { BUILDINGS, CATEGORIES, LAUNCH_DEBRIS } from '../../game/data/buildings';
 import { inTransit, quoteBuilding } from '../../game/engine/actions';
+import { buildingCap } from '../../game/engine/formulas';
 import { effectiveProvides } from '../../game/engine/modifiers';
 import type { BuildingDef, BuyAmount, Provides } from '../../game/types';
 import { GameIcon } from './GameIcon';
@@ -36,6 +37,7 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
   const s = useGame((g) => g.state);
   const mods = useGame((g) => g.mods);
   const bridge = useGame((g) => g.snap.latencyBridge);
+  const cleanShare = useGame((g) => g.snap.cleanLaunchShare);
   // Part de la demande déjà perdue : acheter encore de la demande (ventes) n'aidera pas.
   const lost = useGame((g) => (g.snap.totalDemand > 0 ? 1 - g.snap.totalServed / g.snap.totalDemand : 0));
   const buy = useGame((g) => g.buy);
@@ -44,6 +46,13 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
   const q = quoteBuilding(s, b, s.settings.buyAmount, mods);
   const mult = (mods.building[b.id] ?? 1) * (mods.cat[b.cat] ?? 1);
   const disabled = !!q.blocked;
+  // Plafond de l'ère : affiché sous le compteur, et à la place du prix une fois atteint.
+  const cap = buildingCap(b, s.era);
+  const nextCap = buildingCap(b, s.era + 1);
+  const maxed = owned + pending >= cap;
+  const capTip = isFinite(cap)
+    ? `Maximum de l’ère : ${cap}.` + (nextCap > cap ? ` Il passe à ${nextCap} à l’ère suivante.` : ' Plafond définitif.')
+    : undefined;
   const [pops, setPops] = useState<{ id: number; n: number }[]>([]);
   const popId = useRef(0);
   const onBuy = () => {
@@ -54,10 +63,10 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
     window.setTimeout(() => setPops((p) => p.filter((o) => o.id !== id)), 800);
   };
   const reason =
-    q.blocked === 'space' ? 'Plus de place !' : q.blocked === 'lift' ? 'Emport insuffisant !' : q.blocked === 'max' ? 'Maximum atteint' : q.blocked === 'era' ? 'Ère suivante' : '';
+    q.blocked === 'space' ? 'Plus de place !' : q.blocked === 'lift' ? 'Emport insuffisant !' : q.blocked === 'max' ? 'MAX' : q.blocked === 'era' ? 'Ère suivante' : '';
   return (
     <button
-      className={`shop-item ${disabled ? 'disabled' : ''} ${q.blocked === 'money' ? 'poor' : ''} ${focus ? 'focus' : ''}`} onClick={onBuy} disabled={disabled}>
+      className={`shop-item ${disabled ? 'disabled' : ''} ${q.blocked === 'money' ? 'poor' : ''} ${maxed ? 'maxed' : ''} ${focus ? 'focus' : ''}`} onClick={onBuy} disabled={disabled}>
       <span className="shop-icon">
         <GameIcon set="buildings" id={b.id} emoji={b.icon} size={44} />
       </span>
@@ -76,6 +85,19 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
           {b.slots > 0 && <span className="stat-pill space">{b.slots} U</span>}
           {b.mass !== undefined && <span className="stat-pill space">🚀 {mass(b.mass * mods.mass)}</span>}
           {b.debris !== undefined && <span className="stat-pill">🛰️ {mass(b.debris * mods.mass)} de débris</span>}
+          {b.debris === undefined && b.mass !== undefined && (
+            <span
+              className="stat-pill"
+              title={`Étages et fragments laissés en orbite par le lancement (${LAUNCH_DEBRIS.perTonne * 100} % de la masse), réduits jusqu’à −${LAUNCH_DEBRIS.cleanCut * 100} % selon la part de vos lanceurs sans fusée (actuellement ${Math.round(cleanShare * 100)} %).`}
+            >
+              🛰️ {mass(b.mass * LAUNCH_DEBRIS.perTonne * (1 - LAUNCH_DEBRIS.cleanCut * cleanShare) * mods.mass)} de débris de lancement
+            </span>
+          )}
+          {b.flags?.includes('cleanLaunch') && (
+            <span className="stat-pill" title="Lanceur sans fusée : réduit les débris de lancement au prorata de sa part dans votre capacité d’emport.">
+              ♻️ lancement propre
+            </span>
+          )}
           {b.remote && (
             <span
               className="stat-pill remote"
@@ -100,6 +122,11 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
       <span className="shop-side">
         <span key={owned} className={`shop-owned ${pops.length ? 'bump' : ''}`}>
           {owned}
+          {isFinite(cap) && (
+            <small className="shop-cap" title={capTip}>
+              /{cap}
+            </small>
+          )}
         </span>
         {pending > 0 && <span className="shop-transit" title="En route">+{pending} ⏳</span>}
         {pops.map((p) => (
@@ -107,7 +134,7 @@ function ShopItem({ b, focus }: { b: BuildingDef; focus: boolean }) {
             +{p.n}
           </span>
         ))}
-        <span className={`shop-cost ${q.blocked === 'money' ? 'bad' : ''}`}>
+        <span className={`shop-cost ${q.blocked === 'money' ? 'bad' : ''} ${q.blocked === 'max' ? 'max' : ''}`} title={q.blocked === 'max' ? capTip : undefined}>
           {reason || (
             <>
               {q.count > 1 && <small>×{q.count} </small>}

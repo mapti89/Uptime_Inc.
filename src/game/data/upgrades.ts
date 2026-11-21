@@ -166,12 +166,12 @@ const NAMED: UpgradeDef[] = [
   { id: 'meshnet', name: 'Maillage inter-satellites', icon: '🕸️', era: 8, cost: 1e19, desc: 'Internet orbital ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'orbitnet' }] },
   { id: 'lunarfactory', name: 'Usine lunaire', icon: '🏭', era: 9, cost: 5e21, desc: 'Programme spatial −25 %, emport ×1,5.', effects: [{ kind: 'costMult', cat: 'orbit', mult: 0.75 }, { kind: 'statMult', stat: 'lift', mult: 1.5 }] },
   { id: 'memorialvault', name: 'Mémoire de l’humanité', icon: '📚', era: 9, cost: 1e22, desc: 'Archive de l’humanité ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'archive' }] },
-  { id: 'marsvisa', name: 'Visa martien', icon: '🛂', era: 10, cost: 5e24, desc: 'Prix ×1,5.', effects: [{ kind: 'priceMult', mult: 1.5 }] },
-  { id: 'gridcompute', name: 'Grille de calcul solaire', icon: '🧮', era: 10, cost: 1e25, desc: 'Simulation scientifique ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'scisim' }] },
-  { id: 'probeai', name: 'IA de navigation des sondes', icon: '🧭', era: 11, cost: 5e27, desc: 'Colonisation ×2.', effects: [{ kind: 'statMult', stat: 'replication', mult: 2 }] },
-  { id: 'consentprotocol', name: 'Protocole de consentement', icon: '🪪', era: 11, cost: 1e28, desc: 'Téléversement de conscience ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'mindupload' }] },
-  { id: 'galacticsla', name: 'SLA galactique', icon: '🌠', era: 12, cost: 5e30, desc: 'Prix ×2.', effects: [{ kind: 'priceMult', mult: 2 }] },
-  { id: 'cosmicrender', name: 'Rendu cosmique', icon: '🎇', era: 12, cost: 1e31, desc: 'Simulation d’univers ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'universe' }] },
+  { id: 'marsvisa', name: 'Visa martien', icon: '🛂', era: 10, cost: 2.5e23, desc: 'Prix ×1,5.', effects: [{ kind: 'priceMult', mult: 1.5 }] },
+  { id: 'gridcompute', name: 'Grille de calcul solaire', icon: '🧮', era: 10, cost: 5e23, desc: 'Simulation scientifique ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'scisim' }] },
+  { id: 'probeai', name: 'IA de navigation des sondes', icon: '🧭', era: 11, cost: 2.5e26, desc: 'Colonisation ×2.', effects: [{ kind: 'statMult', stat: 'replication', mult: 2 }] },
+  { id: 'consentprotocol', name: 'Protocole de consentement', icon: '🪪', era: 11, cost: 5e26, desc: 'Téléversement de conscience ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'mindupload' }] },
+  { id: 'galacticsla', name: 'SLA galactique', icon: '🌠', era: 12, cost: 2.5e29, desc: 'Prix ×2.', effects: [{ kind: 'priceMult', mult: 2 }] },
+  { id: 'cosmicrender', name: 'Rendu cosmique', icon: '🎇', era: 12, cost: 5e29, desc: 'Simulation d’univers ×2.', effects: [{ kind: 'priceMult', mult: 2, reqType: 'universe' }] },
 ];
 
 export const UPGRADES: UpgradeDef[] = [

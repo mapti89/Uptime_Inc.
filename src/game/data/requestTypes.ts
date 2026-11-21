@@ -1,7 +1,14 @@
 import type { RequestTypeDef } from '../types';
 
+/**
+ * Les plafonds par ère gardent une réserve de capacité ×3 (buzz viral) : au maximum, la demande
+ * n'occupe qu'un tiers de l'infrastructure. Les prix sont relevés d'autant pour que le revenu
+ * par machine reste celui d'origine.
+ */
+export const PRICE_SCALE = 3;
+
 // Besoins exprimés par requête/s : cpu (vCPU), ram (Go), storage (To), gpu, bw (Mb/s)
-export const REQUEST_TYPES: RequestTypeDef[] = [
+const BASE_REQUEST_TYPES: RequestTypeDef[] = [
   {
     id: 'static',
     name: 'Site statique',
@@ -159,6 +166,8 @@ export const REQUEST_TYPES: RequestTypeDef[] = [
     tolerant: true,
   },
 ];
+
+export const REQUEST_TYPES: RequestTypeDef[] = BASE_REQUEST_TYPES.map((r) => ({ ...r, price: r.price * PRICE_SCALE }));
 
 export const REQUEST_BY_ID: Record<string, RequestTypeDef> = Object.fromEntries(
   REQUEST_TYPES.map((r) => [r.id, r]),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDING_BY_ID } from '../src/game/data/buildings';
-import { bulkCost, maxAffordable } from '../src/game/engine/formulas';
+import { BUILDINGS, BUILDING_BY_ID } from '../src/game/data/buildings';
+import { buildingCap, bulkCost, maxAffordable } from '../src/game/engine/formulas';
 import { computeModifiers } from '../src/game/engine/modifiers';
 import { computeSnapshot } from '../src/game/engine/snapshot';
 import { newGame } from '../src/game/engine/state';
@@ -11,6 +11,71 @@ import { simulateOffline } from '../src/game/engine/offline';
 import { sharesFor } from '../src/game/data/prestige';
 
 const pi = BUILDING_BY_ID.pi;
+
+describe('plafonds par ère', () => {
+  it('le plafond suit l’ère et garde la dernière valeur au-delà du tableau', () => {
+    const b = { ...pi, era: 2, max: undefined, maxByEra: [5, 12, 20] };
+    expect(buildingCap(b, 1)).toBe(0);
+    expect(buildingCap(b, 2)).toBe(5);
+    expect(buildingCap(b, 3)).toBe(12);
+    expect(buildingCap(b, 9)).toBe(20);
+    expect(buildingCap({ ...pi, max: undefined, maxByEra: undefined }, 5)).toBe(Infinity);
+  });
+
+  it('chaque bâtiment a un plafond qui ne baisse jamais d’une ère à l’autre', () => {
+    for (const b of BUILDINGS) {
+      let prev = 0;
+      for (let e = b.era; e <= 12; e++) {
+        const c = buildingCap(b, e);
+        expect(Number.isFinite(c), `${b.id} ère ${e}`).toBe(true);
+        expect(c, `${b.id} ère ${e}`).toBeGreaterThanOrEqual(Math.max(1, prev));
+        prev = c;
+      }
+    }
+  });
+
+  it('on ne peut pas acheter au-delà du plafond, et il remonte à l’ère suivante', () => {
+    const s = newGame();
+    s.money = 1e30;
+    const cap = buildingCap(pi, 1);
+    s.owned.pi = cap;
+    expect(A.quoteBuilding(s, pi, 1).blocked).toBe('max');
+    expect(A.buyBuilding(s, 'pi', 1)).toBe(false);
+    // ×100 et Max s'arrêtent au plafond.
+    s.owned.pi = cap - 2;
+    s.owned.shelf = 50;
+    expect(A.quoteBuilding(s, pi, 100).count).toBe(2);
+    s.era = 2;
+    if (buildingCap(pi, 2) > cap) expect(A.quoteBuilding(s, pi, 1).blocked).not.toBe('max');
+  });
+});
+
+describe('migration vers les plafonds (v3 → v4)', () => {
+  it('ramène le matériel au plafond, rembourse l’excédent et monte les appuis au max', () => {
+    const old = newGame();
+    old.version = 3;
+    old.era = 3;
+    old.money = 0;
+    old.owned = { pi: 500, ads: 400, fan: 0, outlet: 2 };
+    const s = deserialize(JSON.stringify(old));
+    expect(s.version).toBeGreaterThanOrEqual(4);
+    expect(s.owned.pi).toBe(buildingCap(pi, 3));
+    expect(s.owned.ads).toBe(buildingCap(BUILDING_BY_ID.ads, 3));
+    // Électricité et refroidissement : montés au maximum de l'ère.
+    expect(s.owned.fan).toBe(buildingCap(BUILDING_BY_ID.fan, 3));
+    expect(s.owned.outlet).toBe(buildingCap(BUILDING_BY_ID.outlet, 3));
+    expect(s.money).toBeGreaterThan(0);
+    // Partie déjà commencée : le tutoriel ne repart pas de zéro (il reste dans l'aide).
+    expect(s.settings.tutorial).toBe(true);
+    expect(s.settings.tutoSeen.intro).toBe(true);
+    expect(s.settings.tutoSeen['era-3']).toBe(true);
+    expect(newGame().settings.tutoSeen).toEqual({});
+    // Une sauvegarde déjà à jour n'est pas retouchée.
+    const again = deserialize(serialize(s));
+    expect(again.owned).toEqual(s.owned);
+    expect(again.money).toBe(s.money);
+  });
+});
 
 describe('formules de coût', () => {
   it('bulkCost est la somme géométrique des coûts unitaires', () => {
@@ -223,11 +288,13 @@ describe('électricité, refroidissement et espace (v2)', () => {
     const pueOf = () => computeSnapshot(s, computeModifiers(s)).pue;
     const cracOnly = pueOf();
     // Un groupe plus sobre qui prend réellement la charge fait baisser le PUE.
-    s.owned.liquid = 1;
+    const heat = computeSnapshot(s, computeModifiers(s)).heat;
+    const unit = BUILDING_BY_ID.liquid.provides.cooling! * computeModifiers(s).stat.cooling;
+    s.owned.liquid = Math.ceil(heat / unit);
     const withLiquid = pueOf();
     expect(withLiquid).toBeLessThan(cracOnly);
     // Sur-construire au-delà du besoin le dégrade (consommation à vide).
-    s.owned.liquid = 100;
+    s.owned.liquid = 10 * Math.ceil(heat / unit);
     expect(pueOf()).toBeGreaterThan(withLiquid);
   });
 
@@ -286,7 +353,9 @@ describe('conquête spatiale', () => {
     expect(A.buyBuilding(s, 'orbital', 1)).toBe(true);
     expect(A.buyBuilding(s, 'orbital', 1)).toBe(true);
     expect(A.quoteBuilding(s, BUILDING_BY_ID.orbital, 1).blocked).toBe('lift');
+    // Quelques pas de tir libèrent la place d'un troisième.
     expect(A.buyBuilding(s, 'launchpad', 1)).toBe(true);
+    for (let i = 0; i < 20 && A.quoteBuilding(s, BUILDING_BY_ID.orbital, 1).blocked === 'lift'; i++) A.buyBuilding(s, 'launchpad', 1);
     expect(A.quoteBuilding(s, BUILDING_BY_ID.orbital, 1).blocked).toBeUndefined();
   });
 
@@ -299,8 +368,26 @@ describe('conquête spatiale', () => {
     const bad = computeSnapshot(s, computeModifiers(s));
     expect(bad.debris).toBeGreaterThan(bad.cleanupCap);
     expect(bad.debrisFactor).toBeLessThan(1);
-    s.owned.debristug = 10;
+    // Assez de remorqueurs pour absorber l'excédent.
+    const tug = BUILDING_BY_ID.debristug.provides.cleanup! * computeModifiers(s).stat.cleanup;
+    s.owned.debristug = Math.ceil((bad.debris - bad.cleanupCap) / tug) + 1;
     expect(computeSnapshot(s, computeModifiers(s)).debrisFactor).toBe(1);
+  });
+
+  it('les lancements laissent des débris, réduits par les lanceurs sans fusée', () => {
+    const s = spaceGame(9);
+    s.owned = { lavatube: 10, superheavy: 20 };
+    const rocket = computeSnapshot(s, computeModifiers(s));
+    expect(rocket.launchDebris).toBeGreaterThan(0);
+    expect(rocket.cleanLaunchShare).toBe(0);
+    // Même emport, mais assuré en partie par une catapulte : moins de débris de lancement.
+    s.owned = { lavatube: 10, superheavy: 20, massdriver: 2 };
+    const clean = computeSnapshot(s, computeModifiers(s));
+    expect(clean.cleanLaunchShare).toBeGreaterThan(0);
+    expect(clean.launchDebris).toBeLessThan(rocket.launchDebris);
+    // Le matériel qui a ses propres débris n'en ajoute pas au lancement.
+    s.owned = { swarm: 4, superheavy: 2 };
+    expect(computeSnapshot(s, computeModifiers(s)).launchDebris).toBe(0);
   });
 
   it('le matériel lointain sert surtout les requêtes tolérantes à la latence', () => {

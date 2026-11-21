@@ -42,6 +42,10 @@ interface Store {
   buyPrestige: (id: string) => void;
   setBuyAmount: (a: BuyAmount) => void;
   toggleAutoUpgrades: () => void;
+  /** Active ou désactive le tutoriel. */
+  setTutorial: (on: boolean) => void;
+  /** Marque une étape du tutoriel comme vue (« intro », « era-3 »…). */
+  markTuto: (id: string) => void;
   dismissOffline: () => void;
   dismissToast: (id: number) => void;
   dismissEraTransition: () => void;
@@ -167,6 +171,8 @@ export const useGame = create<Store>((set, get) => ({
   buyPrestige: (id) => act(get, set, (s) => A.buyPrestigeShop(s, id)),
   setBuyAmount: (a) => mutate(get, set, (s) => (s.settings.buyAmount = a)),
   toggleAutoUpgrades: () => act(get, set, (s) => (s.settings.autoUpgrades = !s.settings.autoUpgrades)),
+  setTutorial: (on) => mutate(get, set, (s) => (s.settings.tutorial = on)),
+  markTuto: (id) => mutate(get, set, (s) => (s.settings.tutoSeen = { ...s.settings.tutoSeen, [id]: true })),
   dismissOffline: () => set({ offline: null }),
   dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
   dismissEraTransition: () => set({ eraTransition: null }),
