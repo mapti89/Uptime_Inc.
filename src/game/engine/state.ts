@@ -1,6 +1,6 @@
 import type { GameState, LogEntry } from '../types';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export function newGame(prev?: GameState['prestige']): GameState {
   const prestige = prev

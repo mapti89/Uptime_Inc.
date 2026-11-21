@@ -911,9 +911,10 @@ export function applyBalance(b: BuildingDef, bal: { max: number[]; scale?: numbe
   const key = scaledKey(b);
   const provides = { ...b.provides };
   if (key && bal.scale !== undefined && provides[key]) provides[key] = round2(provides[key]! * bal.scale);
-  // Commercial : le prix suit la production, pour garder le même coût par requête/s.
-  // C'est le plafond qui borne la demande, pas la rentabilité des contrats.
-  const baseCost = b.cat === 'sales' && bal.scale !== undefined ? round2(b.baseCost * bal.scale) : b.baseCost;
+  // Commercial, électricité et refroidissement : le prix suit la production, pour garder le même
+  // coût par requête/s ou par watt. C'est le plafond qui borne la quantité, pas le prix.
+  const followsPrice = b.cat === 'sales' || b.cat === 'power' || b.cat === 'cooling';
+  const baseCost = followsPrice && bal.scale !== undefined ? round2(b.baseCost * bal.scale) : b.baseCost;
   return { ...b, baseCost, maxByEra: bal.max, provides };
 }
 

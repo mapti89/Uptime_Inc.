@@ -54,6 +54,18 @@ const MIGRATIONS: Record<number, Migration> = {
     settings.tutoSeen = tutoSeen;
     return { ...raw, owned, money: money + refund, settings, rebalanced: true };
   },
+  // v4 → v5 : électricité et refroidissement changent de puissance unitaire, avec des plafonds
+  // bien plus bas. Ils avaient été offerts au maximum par la migration v4 : ils sont remis au
+  // nouveau maximum de l'ère, sans remboursement du surplus.
+  4: (raw) => {
+    const era = typeof raw.era === 'number' ? raw.era : 1;
+    const owned = { ...((raw.owned as Record<string, number>) ?? {}) };
+    for (const b of BUILDINGS) {
+      if ((b.cat !== 'power' && b.cat !== 'cooling') || b.era > era) continue;
+      owned[b.id] = buildingCap(b, era);
+    }
+    return { ...raw, owned };
+  },
 };
 
 /** Fusionne profondément une sauvegarde avec un état neuf (tolère les champs manquants). */

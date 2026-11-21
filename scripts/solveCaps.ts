@@ -13,9 +13,11 @@
  *  3. Commercial : sa production est calée pour que la demande, même triplée (buzz viral,
  *     signal extraterrestre), reste entièrement servie quand tout est au max. Son prix suit
  *     le même facteur (même coût par requête/s qu'avant) : c'est le plafond qui borne la demande.
- *  4. Stockage, réseau, refroidissement, électricité, espace, emport, nettoyage orbital :
- *     production calée au plus juste sur le besoin de l'état « tout au max » (pic ×3 pour
- *     le stockage et le réseau, petite marge pour le reste).
+ *  4. Stockage, réseau, espace, emport, nettoyage orbital : production calée au plus juste sur
+ *     le besoin de l'état « tout au max » (pic ×3 pour le stockage et le réseau, petite marge
+ *     pour le reste). Électricité et refroidissement gardent leur production d'origine jusqu'à
+ *     l'ère 5 (leur nombre est calé au plus juste) ; ensuite, quelques exemplaires de
+ *     puissance réduite (10 pour le plus gros de l'ère, 5 pour les autres).
  *  5. Arrivée : l'état max doit encore servir 95 % des requêtes en entrant dans l'ère suivante
  *     (nouveaux types de requêtes, trafic de base plus fort), le temps d'acheter le nouveau matériel.
  * Le résultat (plafond, facteur de production) est écrit dans src/game/data/balance.ts.
@@ -64,7 +66,7 @@ function setScale(b: BuildingDef, k: number) {
   const key = scaledKey(b) as keyof Provides;
   scale[b.id] = k;
   b.provides = { ...RAW[b.id].provides, [key]: round2(RAW[b.id].provides[key]! * k) };
-  if (b.cat === 'sales') b.baseCost = round2(RAW[b.id].baseCost * k);
+  if (b.cat === 'sales' || b.cat === 'power' || b.cat === 'cooling') b.baseCost = round2(RAW[b.id].baseCost * k);
 }
 
 /** Exemplaires dont le prix unitaire reste sous le budget. */
@@ -127,9 +129,54 @@ function solveGroup(E: number, g: Group, ok: () => boolean, want: 'min' | 'max')
   const bud = bisect((x) => old.forEach((b) => setCap(b, E, Math.max(prevCap(b, E), unitsUnder(b, x)))), ok, want, 0, 45);
   return `${g}:anciens≤${fmtN(bud)}`;
 }
+/**
+ * Électricité et refroidissement gardent leur production d'origine (une centrale reste une
+ * centrale) : c'est leur nombre qui est calé au plus juste. Les nouveautés de l'ère montent
+ * juste ce qu'il faut (au moins un exemplaire) ; sans nouveauté, les anciens prennent le relais.
+ */
+const COUNTED: Group[] = ['power', 'cooling'];
+
+/**
+ * À partir de cette ère, les centrales et refroidissements d'origine sont surdimensionnés
+ * (un seul exemplaire couvre 100 fois le besoin) : leur puissance est réduite pour qu'il en
+ * faille quelques-uns — PLANT_CAP pour le plus gros de l'ère, la moitié pour les autres —
+ * sans descendre sous le double du plus gros équipement de l'ère précédente.
+ */
+const SCALED_PLANTS_FROM = 6;
+const PLANT_CAP = 10;
+
+function solveCount(E: number, g: Group, ok: () => boolean): string {
+  const fresh = inGroup(E, g, true);
+  if (fresh.length && E >= SCALED_PLANTS_FROM) {
+    const sorted = [...fresh].sort((a, b) => b.baseCost - a.baseCost);
+    const key = g as 'power' | 'cooling';
+    sorted.forEach((b, i) => setCap(b, E, i === 0 ? PLANT_CAP : PLANT_CAP / 2));
+    let k = bisect((x) => fresh.forEach((b) => setScale(b, x)), ok, 'min', -12, 12);
+    // Le plus gros équipement de l'ère produit au moins deux fois plus que celui de l'ère
+    // précédente : s'il le faut, on garde cette puissance et on réduit leur nombre.
+    const prevTop = inGroup(E - 1, g, false).reduce((mx, b) => Math.max(mx, b.provides[key] ?? 0), 0);
+    const kMin = (2 * prevTop) / (RAW[sorted[0].id].provides[key] ?? 1);
+    if (k < kMin) {
+      k = Math.min(1, kMin);
+      fresh.forEach((b) => setScale(b, k));
+      bisect((x) => sorted.forEach((b, i) => setCap(b, E, Math.max(1, Math.min(i === 0 ? PLANT_CAP : PLANT_CAP / 2, Math.round(x))))), ok, 'min', 0, 1.1);
+    }
+    return `${g}:${fresh.map((b) => `${b.id}=${capAt(b, E)}`).join(',')} ×${fmtN(k)}`;
+  }
+  if (fresh.length) {
+    const bud = bisect((x) => fresh.forEach((b) => setCap(b, E, Math.max(1, unitsUnder(RAW[b.id], x)))), ok, 'min', 0, 45);
+    return `${g}:${fresh.map((b) => `${b.id}=${capAt(b, E)}`).join(',')} (≤${fmtN(bud)})`;
+  }
+  return solveGroup(E, g, ok, 'min');
+}
+
 function unlimited(E: number, g: Group) {
   const fresh = inGroup(E, g, true);
-  if (fresh.length) fresh.forEach((b) => setScale(b, 1e9));
+  if (fresh.length && COUNTED.includes(g)) {
+    fresh.forEach((b) => setCap(b, E, 1e6));
+    if (E >= SCALED_PLANTS_FROM) fresh.forEach((b) => setScale(b, 1));
+  }
+  else if (fresh.length) fresh.forEach((b) => setScale(b, 1e9));
   else inGroup(E, g, false).forEach((b) => setCap(b, E, 1e6));
 }
 
@@ -196,8 +243,12 @@ for (let E = 1; E <= MAX_ERA; E++) {
   notes.push(solveGroup(E, 'storage', serveOk, 'min'));
   notes.push(solveGroup(E, 'network', serveOk, 'min'));
   unlimited(E, 'power');
-  notes.push(solveGroup(E, 'cooling', () => m(E).cooling >= MARGIN, 'min'));
-  notes.push(solveGroup(E, 'power', () => m(E).power >= MARGIN, 'min'));
+  // Électricité et froid doivent suffire au matériel de l'ère au max même avant d'en avoir
+  // terminé la recherche et les améliorations (qui réduisent la consommation) : sinon le
+  // joueur resterait bloqué, centrales au maximum, le temps de les débloquer.
+  const early = () => measure(maxState(E, { techEra: E - 1 }), PEAK);
+  notes.push(solveCount(E, 'cooling', () => m(E).cooling >= MARGIN && (E === 1 || early().cooling >= 1)));
+  notes.push(solveCount(E, 'power', () => m(E).power >= MARGIN && (E === 1 || early().power >= 1)));
   notes.push(solveGroup(E, 'space', () => m(E).slotsFree >= 0, 'min'));
   notes.push(solveGroup(E, 'lift', () => m(E).lift >= 1, 'min'));
   notes.push(solveGroup(E, 'cleanup', () => m(E).debris >= MARGIN, 'min'));

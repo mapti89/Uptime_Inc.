@@ -77,6 +77,22 @@ describe('migration vers les plafonds (v3 → v4)', () => {
   });
 });
 
+describe('migration v4 → v5 (électricité et refroidissement)', () => {
+  it('remet l’électricité et le froid au nouveau maximum, sans rembourser le surplus', () => {
+    const old = newGame();
+    old.version = 4;
+    old.era = 2;
+    old.money = 100;
+    old.owned = { fan: 40, outlet: 30, tri: 0, pi: 3 };
+    const s = deserialize(JSON.stringify(old));
+    expect(s.owned.fan).toBe(buildingCap(BUILDING_BY_ID.fan, 2));
+    expect(s.owned.outlet).toBe(buildingCap(BUILDING_BY_ID.outlet, 2));
+    expect(s.owned.tri).toBe(buildingCap(BUILDING_BY_ID.tri, 2));
+    expect(s.owned.pi).toBe(3);
+    expect(s.money).toBe(100);
+  });
+});
+
 describe('formules de coût', () => {
   it('bulkCost est la somme géométrique des coûts unitaires', () => {
     let sum = 0;
