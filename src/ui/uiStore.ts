@@ -25,6 +25,12 @@ interface UiStore {
   /** Partie décodée en attente de confirmation avant de remplacer la partie en cours. */
   pendingImport: GameState | null;
   proposeImport: (s: GameState | null) => void;
+  /** Menu d'aide ouvert. */
+  helpOpen: boolean;
+  setHelpOpen: (open: boolean) => void;
+  /** Fiche du tutoriel rouverte à la demande depuis l'aide : introduction ou nouveautés d'une ère. */
+  tutoReplay: 'intro' | number | null;
+  replayTuto: (what: 'intro' | number | null) => void;
 }
 
 let focusNonce = 0;
@@ -42,4 +48,8 @@ export const useUi = create<UiStore>((set) => ({
   clearShopFocus: (nonce) => set((s) => (s.shopFocus?.nonce === nonce ? { shopFocus: null } : {})),
   pendingImport: null,
   proposeImport: (pendingImport) => set({ pendingImport }),
+  helpOpen: false,
+  setHelpOpen: (helpOpen) => set({ helpOpen }),
+  tutoReplay: null,
+  replayTuto: (tutoReplay) => set({ tutoReplay, helpOpen: false }),
 }));

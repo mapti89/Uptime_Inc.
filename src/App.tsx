@@ -19,6 +19,8 @@ import { EraTransition } from './ui/components/EraTransition';
 import { Victory } from './ui/components/Victory';
 import { ImportConfirm } from './ui/components/ImportConfirm';
 import { SyncConflict } from './ui/components/SyncConflict';
+import { Tutorial } from './ui/components/Tutorial';
+import { HelpMenu } from './ui/components/HelpMenu';
 import { EVENT_BY_ID } from './game/data/events';
 import { useGame } from './game/store';
 import { UPGRADES } from './game/data/upgrades';
@@ -289,6 +291,8 @@ export default function App() {
       <Victory />
       <ImportConfirm />
       <SyncConflict />
+      <HelpMenu />
+      <Tutorial />
     </div>
   );
 }

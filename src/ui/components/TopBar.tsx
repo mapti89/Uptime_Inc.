@@ -2,6 +2,7 @@ import { useGame } from '../../game/store';
 import { eraDef } from '../../game/data/eras';
 import { fmt, money, pct } from '../format';
 import { Tweened } from './Tweened';
+import { HelpButton } from './HelpMenu';
 import type { ReactNode } from 'react';
 
 function Chip({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: string; tone?: string }) {
@@ -45,6 +46,7 @@ export function TopBar() {
         {s.era >= 2 && <Chip label="R&D" value={<Tweened value={s.rd} format={fmt} />} sub={`+${fmt(snap.rdRate)}/s`} tone="rd" />}
         {s.prestige.totalShares > 0 && <Chip label="Actions" value={fmt(s.prestige.shares)} tone="shares" />}
       </div>
+      <HelpButton />
     </header>
   );
 }
