@@ -121,7 +121,19 @@ function placeGroup(E: number, g: Group, budget: number) {
 function solveGroup(E: number, g: Group, ok: () => boolean, want: 'min' | 'max'): string {
   const fresh = inGroup(E, g, true);
   if (fresh.length) {
-    const k = bisect((x) => fresh.forEach((b) => setScale(b, x)), ok, want, -12, 12);
+    let k = bisect((x) => fresh.forEach((b) => setScale(b, x)), ok, want, -12, 12);
+    // Si les anciens suffisent déjà, la dichotomie tomberait à ~0 : le plus gros nouveau
+    // bâtiment produit au moins deux fois plus que le plus gros de l'ère précédente.
+    if (want === 'min') {
+      const key = scaledKey(fresh[0]) as keyof Provides;
+      const prevTop = inGroup(E - 1, g, false).reduce((mx, b) => Math.max(mx, b.provides[key] ?? 0), 0);
+      const rawTop = fresh.reduce((mx, b) => Math.max(mx, RAW[b.id].provides[key] ?? 0), 0);
+      const kMin = rawTop > 0 ? (2 * prevTop) / rawTop : 0;
+      if (k < kMin) {
+        k = kMin;
+        fresh.forEach((b) => setScale(b, k));
+      }
+    }
     return `${g}×${fmtN(k)}`;
   }
   const old = inGroup(E, g, false);
